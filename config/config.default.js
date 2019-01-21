@@ -6,6 +6,16 @@ exports.sequrity = {
   csrf: {enable: false}
 }
 
+exports.sequelize = {
+  Sequelize: require('sequelize'),
+  dialect: 'mysql',
+  database: 'qtum_mainnet',
+  host: 'localhost',
+  port: 3306,
+  username: 'qtum',
+  password: ''
+}
+
 exports.qtum = {
   chain: 'mainnet'
 }
