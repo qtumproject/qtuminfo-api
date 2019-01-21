@@ -21,8 +21,8 @@ module.exports = app => {
     const {Header, Address} = app.model
     Header.hasOne(Block, {as: 'block', foreignKey: 'height'})
     Block.belongsTo(Header, {as: 'header', foreignKey: 'height'})
-    Block.hasOne(Address, {as: 'miner', foreignKey: 'minerId'})
     Address.hasOne(Block, {as: 'minedBlocks', foreignKey: 'minerId'})
+    Block.belongsTo(Address, {as: 'miner', foreignKey: 'minerId'})
   }
 
   return Block

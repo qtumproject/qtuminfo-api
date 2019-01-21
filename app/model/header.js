@@ -49,8 +49,12 @@ module.exports = app => {
   })
 
   Header.prototype.isProofOfStake = function isProofOfStake() {
-    return Buffer.compare(this.stake_prev_transaction_id, Buffer.alloc(32)) !== 0
-      && this.stake_output_index !== 0xffffffff
+    return Buffer.compare(this.stakePrevTxId, Buffer.alloc(32)) !== 0 && this.stakeOutputIndex !== 0xffffffff
+  }
+
+  Header.associate = () => {
+    Header.hasOne(Header, {as: 'prevHeader', foreignKey: 'height'})
+    Header.hasOne(Header, {as: 'nextHeader', foreignKey: 'height'})
   }
 
   return Header
