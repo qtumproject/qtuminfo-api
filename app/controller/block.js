@@ -43,6 +43,23 @@ class BlockController extends Controller {
     }
   }
 
+  async rawBlock() {
+    const {ctx} = this
+    let arg = ctx.params.block
+    if (/^(0|[1-9]\d{0,9})$/.test(arg)) {
+      arg = Number(arg)
+    } else if (/^[0-9a-f]{64}$/.test(arg)) {
+      arg = Buffer.from(arg, 'hex')
+    } else {
+      ctx.throw(404)
+    }
+    let block = await ctx.service.block.getRawBlock(arg)
+    if (!block) {
+      ctx.throw(404)
+    }
+    ctx.body = block.toBuffer().toString('hex')
+  }
+
   async list() {
     const {ctx} = this
     let date = ctx.query.date

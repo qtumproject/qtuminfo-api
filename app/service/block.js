@@ -72,6 +72,48 @@ class BlockService extends Service {
     }
   }
 
+  async getRawBlock(arg) {
+    const {Header, Transaction} = this.ctx.model
+    const {Header: RawHeader, Block: RawBlock} = this.app.qtuminfo.lib
+    let filter
+    if (Number.isInteger(arg)) {
+      filter = {height: arg}
+    } else if (Buffer.isBuffer(arg)) {
+      filter = {hash: arg}
+    } else {
+      return null
+    }
+    let block = await Header.findOne({where: filter})
+    if (!block) {
+      return null
+    }
+    let transactionIds = (await Transaction.findAll({
+      where: {blockHeight: block.height},
+      attributes: ['id'],
+      order: [['indexInBlock', 'ASC']]
+    })).map(tx => tx.id)
+    let transactions = []
+    for (let id of transactionIds) {
+      transactions.push(await this.ctx.service.transaction.getRawTransaction(id))
+    }
+    return new RawBlock({
+      header: new RawHeader({
+        version: block.version,
+        prevHash: block.prevHash,
+        merkleRoot: block.merkleRoot,
+        timestamp: block.timestamp,
+        bits: block.bits,
+        nonce: block.nonce,
+        hashStateRoot: block.hashStateRoot,
+        hashUTXORoot: block.hashUTXORoot,
+        stakePrevTxId: block.stakePrevTxId,
+        stakeOutputIndex: block.stakeOutputIndex,
+        signature: block.signature
+      }),
+      transactions
+    })
+  }
+
   async listBlocks(min, max) {
     const {Header, Address, Block} = this.ctx.model
     const {between: $between} = this.app.Sequelize.Op
