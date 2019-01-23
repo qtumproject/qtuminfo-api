@@ -147,7 +147,7 @@ class TransactionService extends Service {
           attributes: [],
           where: {destTxId: id}
         }],
-        order: [['blockHeight', 'ASC'], ['indexInBlock', 'ASC'], ['_id', 'ASC']]
+        order: [['blockHeight', 'ASC'], ['indexInBlock', 'ASC']]
       })).map(item => item.id)
       if (contractSpendIds.length) {
         let inputs = await TransactionOutput.findAll({
@@ -305,6 +305,24 @@ class TransactionService extends Service {
       witnesses: this.transformWitnesses(witnesses),
       lockTime: transaction.lockTime
     })
+  }
+
+  async getRecentTransactions(count = 10) {
+    const {Transaction} = this.ctx.model
+    const {or: $or, gt: $gt, lte: $lte} = this.app.Sequelize.Op
+
+    return (await Transaction.findAll({
+      where: {
+        indexInBlock: {[$gt]: 0},
+        [$or]: [
+          {blockHeight: {[$lte]: 5000}},
+          {indexInBlock: {[$gt]: 1}}
+        ]
+      },
+      attributes: ['id'],
+      order: [['blockHeight', 'ASC'], ['indexInBlock', 'ASC'], ['_id', 'ASC']],
+      limit: count
+    })).map(tx => tx.id)
   }
 
   async transformTransaction(transaction, {brief = false} = {}) {

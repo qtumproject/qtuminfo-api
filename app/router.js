@@ -10,4 +10,5 @@ module.exports = app => {
 
   router.get('/tx/:id', controller.transaction.transaction)
   router.get('/raw-tx/:id', controller.transaction.rawTransaction)
+  router.get('/recent-txs', controller.transaction.recent)
 }

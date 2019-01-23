@@ -27,6 +27,13 @@ class TransactionController extends Controller {
     }
     ctx.body = transaction.toBuffer().toString('hex')
   }
+
+  async recent() {
+    const {ctx} = this
+    let count = Number.parseInt(ctx.query.count || 10)
+    let ids = await ctx.service.transaction.getRecentTransactions(count)
+    ctx.body = ids.map(id => id.toString('hex'))
+  }
 }
 
 module.exports = TransactionController
