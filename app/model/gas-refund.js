@@ -25,7 +25,9 @@ module.exports = app => {
     const {Transaction, TransactionOutput} = app.model
     Transaction.hasMany(GasRefund, {as: 'refunds', foreignKey: 'transactionId', sourceKey: 'id'})
     GasRefund.belongsTo(Transaction, {as: 'transaction', foreignKey: 'transactionId', targetKey: 'id'})
-    TransactionOutput.hasOne(GasRefund, {as: 'refund', foreignKey: 'refundTxId', sourceKey: 'outputTxId'})
+    TransactionOutput.hasOne(GasRefund, {as: 'refund', foreignKey: 'transactionId', sourceKey: 'outputTxId'})
+    GasRefund.belongsTo(TransactionOutput, {as: 'refund', foreignKey: 'transactionId', targetKey: 'outputTxId'})
+    TransactionOutput.hasOne(GasRefund, {as: 'refundTo', foreignKey: 'refundTxId', sourceKey: 'outputTxId'})
     GasRefund.belongsTo(TransactionOutput, {as: 'refundTo', foreignKey: 'refundTxId', targetKey: 'outputTxId'})
   }
 

@@ -29,9 +29,11 @@ module.exports = app => {
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
   Receipt.associate = () => {
-    const {Transaction} = app.model
+    const {Transaction, TransactionOutput} = app.model
     Transaction.hasMany(Receipt, {as: 'receipts', foreignKey: 'transactionId', sourceKey: 'id'})
     Receipt.belongsTo(Transaction, {as: 'transaction', foreignKey: 'transactionId', targetKey: 'id'})
+    TransactionOutput.hasOne(Receipt, {as: 'receipt', foreignKey: 'transactionId', sourceKey: 'outputTxId'})
+    Receipt.belongsTo(TransactionOutput, {as: 'transactionOutput', foreignKey: 'transactionId', targetKey: 'outputTxId'})
   }
 
   return Receipt

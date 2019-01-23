@@ -14,7 +14,6 @@ module.exports = app => {
     },
     hash: CHAR(32).BINARY,
     version: INTEGER,
-    marker: INTEGER.UNSIGNED,
     flag: INTEGER(3).UNSIGNED,
     lockTime: INTEGER.UNSIGNED,
     blockHeight: INTEGER.UNSIGNED,

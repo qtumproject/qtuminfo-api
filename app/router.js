@@ -7,4 +7,7 @@ module.exports = app => {
   router.get('/blocks', controller.block.list)
   router.get('/block/:block', controller.block.block)
   router.get('/recent-blocks', controller.block.recent)
+
+  router.get('/tx/:id', controller.transaction.transaction)
+  router.get('/raw-tx/:id', controller.transaction.rawTransaction)
 }

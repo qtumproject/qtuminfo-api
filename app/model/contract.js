@@ -36,9 +36,13 @@ module.exports = app => {
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
   Contract.associate = () => {
-    const {Address} = app.model
+    const {Address, Receipt, ReceiptLog} = app.model
     Address.hasOne(Contract, {as: 'createdContracts', foreignKey: 'ownerId'})
     Contract.belongsTo(Address, {as: 'owner', foreignKey: 'ownerId'})
+    Receipt.belongsTo(Contract, {as: 'contract', foreignKey: 'contractAddress'})
+    Contract.hasMany(Receipt, {as: 'receipts', foreignKey: 'contractAddress'})
+    ReceiptLog.belongsTo(Contract, {as: 'contract', foreignKey: 'address'})
+    Contract.hasMany(ReceiptLog, {as: 'logs', foreignKey: 'address'})
   }
 
   return Contract
