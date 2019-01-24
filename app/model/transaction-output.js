@@ -1,5 +1,5 @@
 module.exports = app => {
-  const {INTEGER, BIGINT, STRING, BLOB} = app.Sequelize
+  const {INTEGER, BIGINT, BOOLEAN, STRING, BLOB} = app.Sequelize
 
   let TransactionOutput = app.model.define('transaction_output', {
     _id: {
@@ -57,7 +57,8 @@ module.exports = app => {
         return this.setDataValue('value', value.toString())
       }
     },
-    addressId: BIGINT.UNSIGNED
+    addressId: BIGINT.UNSIGNED,
+    isStake: BOOLEAN
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
   TransactionOutput.associate = () => {
