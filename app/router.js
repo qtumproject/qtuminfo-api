@@ -1,6 +1,6 @@
 module.exports = app => {
   const {router, controller, middleware} = app
-  const pagination = middleware.pagination()
+  const {address: addressMiddleware, pagination: paginationMiddleware} = middleware
 
   router.get('/info', controller.info.index)
   router.get('/supply', controller.info.supply)
@@ -15,13 +15,13 @@ module.exports = app => {
   router.get('/raw-tx/:id', controller.transaction.rawTransaction)
   router.get('/recent-txs', controller.transaction.recent)
 
-  router.get('/address/:address', controller.address.summary)
-  router.get('/address/:address/balance', controller.address.balance)
-  router.get('/address/:address/balance/total-received', controller.address.totalReceived)
-  router.get('/address/:address/balance/total-sent', controller.address.totalSent)
-  router.get('/address/:address/balance/unconfirmed', controller.address.unconfirmedBalance)
-  router.get('/address/:address/balance/staking', controller.address.stakingBalance)
-  router.get('/address/:address/balance/mature', controller.address.matureBalance)
-  router.get('/address/:address/utxo', controller.address.utxo)
-  router.get('/address/:address/balance-history', pagination, controller.address.balanceHistory)
+  router.get('/address/:address', addressMiddleware(), controller.address.summary)
+  router.get('/address/:address/balance', addressMiddleware(), controller.address.balance)
+  router.get('/address/:address/balance/total-received', addressMiddleware(), controller.address.totalReceived)
+  router.get('/address/:address/balance/total-sent', addressMiddleware(), controller.address.totalSent)
+  router.get('/address/:address/balance/unconfirmed', addressMiddleware(), controller.address.unconfirmedBalance)
+  router.get('/address/:address/balance/staking', addressMiddleware(), controller.address.stakingBalance)
+  router.get('/address/:address/balance/mature', addressMiddleware(), controller.address.matureBalance)
+  router.get('/address/:address/utxo', addressMiddleware(), controller.address.utxo)
+  router.get('/address/:address/balance-history', addressMiddleware(), paginationMiddleware(), controller.address.balanceHistory)
 }

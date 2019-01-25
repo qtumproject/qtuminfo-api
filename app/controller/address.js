@@ -3,9 +3,8 @@ const {Controller} = require('egg')
 class AddressController extends Controller {
   async summary() {
     let {ctx} = this
-    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
     let summary = await ctx.service.address.getAddressSummary(
-      addressParams.addressIds, addressParams.p2pkhAddressIds, addressParams.hexAddresses
+      ctx.state.address.addressIds, ctx.state.address.p2pkhAddressIds, ctx.state.address.hexAddresses
     )
     ctx.body = {
       balance: summary.balance.toString(),
@@ -21,50 +20,43 @@ class AddressController extends Controller {
 
   async balance() {
     let {ctx} = this
-    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
-    let balance = await ctx.service.balance.getBalance(addressParams.addressIds)
+    let balance = await ctx.service.balance.getBalance(ctx.state.address.addressIds)
     ctx.body = balance.toString()
   }
 
   async totalReceived() {
     let {ctx} = this
-    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
-    let {totalReceived} = await ctx.service.balance.getTotalBalanceChanges(addressParams.addressIds)
+    let {totalReceived} = await ctx.service.balance.getTotalBalanceChanges(ctx.state.address.addressIds)
     ctx.body = totalReceived.toString()
   }
 
   async totalSent() {
     let {ctx} = this
-    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
-    let {totalSent} = await ctx.service.balance.getTotalBalanceChanges(addressParams.addressIds)
+    let {totalSent} = await ctx.service.balance.getTotalBalanceChanges(ctx.state.address.addressIds)
     ctx.body = totalSent.toString()
   }
 
   async unconfirmedBalance() {
     let {ctx} = this
-    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
-    let unconfirmed = await ctx.service.balance.getUnconfirmedBalance(addressParams.addressIds)
+    let unconfirmed = await ctx.service.balance.getUnconfirmedBalance(ctx.state.address.addressIds)
     ctx.body = unconfirmed.toString()
   }
 
   async stakingBalance() {
     let {ctx} = this
-    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
-    let unconfirmed = await ctx.service.balance.getStakingBalance(addressParams.addressIds)
+    let unconfirmed = await ctx.service.balance.getStakingBalance(ctx.state.address.addressIds)
     ctx.body = unconfirmed.toString()
   }
 
   async matureBalance() {
     let {ctx} = this
-    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
-    let unconfirmed = await ctx.service.balance.getMatureBalance(addressParams.p2pkhAddressIds)
+    let unconfirmed = await ctx.service.balance.getMatureBalance(ctx.state.address.p2pkhAddressIds)
     ctx.body = unconfirmed.toString()
   }
 
   async utxo() {
     let {ctx} = this
-    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
-    let utxos = await ctx.service.address.getUTXO(addressParams.addressIds)
+    let utxos = await ctx.service.address.getUTXO(ctx.state.address.addressIds)
     ctx.body = utxos.map(utxo => ({
       transactionId: utxo.transactionId.toString('hex'),
       outputIndex: utxo.outputIndex,
@@ -79,8 +71,7 @@ class AddressController extends Controller {
 
   async balanceHistory() {
     let {ctx} = this
-    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
-    let {totalCount, transactions} = await ctx.service.balance.getBalanceHistory(addressParams.addressIds, ctx.state.pagination)
+    let {totalCount, transactions} = await ctx.service.balance.getBalanceHistory(ctx.state.address.addressIds, ctx.state.pagination)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({
