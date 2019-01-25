@@ -81,6 +81,25 @@ class AddressController extends Controller {
     let unconfirmed = await ctx.service.balance.getMatureBalance(addressParams.p2pkhAddressIds)
     ctx.body = unconfirmed.toString()
   }
+
+  async utxo() {
+    let {ctx} = this
+    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
+    if (!addressParams) {
+      ctx.throw(400)
+    }
+    let utxos = await ctx.service.address.getUTXO(addressParams.addressIds)
+    ctx.body = utxos.map(utxo => ({
+      transactionId: utxo.transactionId.toString('hex'),
+      outputIndex: utxo.outputIndex,
+      scriptPubKey: utxo.scriptPubKey.toString('hex'),
+      address: utxo.address.string,
+      value: utxo.value.toString(),
+      isStake: utxo.isStake,
+      blockHeight: utxo.outputHeight,
+      confirmations: utxo.confirmations
+    }))
+  }
 }
 
 module.exports = AddressController

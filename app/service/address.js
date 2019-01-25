@@ -81,6 +81,35 @@ class AddressService extends Service {
     `, {type: db.QueryTypes.SELECT})
     return count
   }
+
+  async getUTXO(ids) {
+    const {Address, TransactionOutput} = this.ctx.model
+    const {in: $in} = this.app.Sequelize.Op
+    const blockHeight = this.app.blockchainInfo.tip.height
+    let utxos = await TransactionOutput.findAll({
+      where: {
+        addressId: {[$in]: ids},
+        inputHeight: null
+      },
+      attributes: ['outputTxId', 'outputIndex', 'outputHeight', 'scriptPubKey', 'value', 'isStake'],
+      include: [{
+        model: Address,
+        as: 'address',
+        required: true,
+        attributes: ['string']
+      }]
+    })
+    return utxos.map(utxo => ({
+      transactionId: utxo.outputTxId,
+      outputIndex: utxo.outputIndex,
+      scriptPubKey: utxo.scriptPubKey,
+      address: utxo.address.string,
+      value: utxo.value,
+      isStake: utxo.isStake,
+      blockHeight: utxo.outputHeight,
+      confirmations: utxo.outputHeight === 0xffffffff ? 0 : blockHeight - utxo.outputHeight + 1
+    }))
+  }
 }
 
 module.exports = AddressService

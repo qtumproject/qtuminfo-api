@@ -20,4 +20,5 @@ module.exports = app => {
   router.get('/address/:address/balance/unconfirmed', controller.address.unconfirmedBalance)
   router.get('/address/:address/balance/staking', controller.address.stakingBalance)
   router.get('/address/:address/balance/mature', controller.address.matureBalance)
+  router.get('/address/:address/utxo', controller.address.utxo)
 }
