@@ -36,22 +36,24 @@ class AddressService extends Service {
 
   async getAddressSummary(addressIds, p2pkhAddressIds, hexAddresses) {
     const {Block} = this.ctx.model
-    const {balance: balanceService} = this.ctx.service
+    const {balance: balanceService, contract: contractService} = this.ctx.service
     const {in: $in, gt: $gt} = this.app.Sequelize.Op
     let [
       {totalReceived, totalSent},
       unconfirmed,
       staking,
       mature,
-      transactionCount,
-      blocksMined
+      qrc20TokenBalances,
+      blocksMined,
+      transactionCount
     ] = await Promise.all([
       balanceService.getTotalBalanceChanges(addressIds),
       balanceService.getUnconfirmedBalance(addressIds),
       balanceService.getStakingBalance(addressIds),
       balanceService.getMatureBalance(p2pkhAddressIds),
+      contractService.getAllQRC20TokenBalances(hexAddresses),
+      Block.count({where: {minerId: {[$in]: p2pkhAddressIds}, height: {[$gt]: 0}}}),
       this.getTransactionCount(addressIds, hexAddresses),
-      Block.count({where: {minerId: {[$in]: p2pkhAddressIds}, height: {[$gt]: 0}}})
     ])
     return {
       balance: totalReceived - totalSent,
@@ -60,6 +62,7 @@ class AddressService extends Service {
       unconfirmed,
       staking,
       mature,
+      qrc20TokenBalances,
       transactionCount,
       blocksMined
     }
@@ -69,7 +72,7 @@ class AddressService extends Service {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
     let addressQuery = addressIds.join(', ') || 'NULL'
-    let topicQuery = hexAddresses.map(address => `0x${address.toString('hex')}`).join(', ') || 'NULL'
+    let topicQuery = hexAddresses.map(address => `0x${'0'.repeat(24) + address.toString('hex')}`).join(', ') || 'NULL'
     let [{count}] = await db.query(`
       SELECT COUNT(DISTINCT(id)) AS count FROM (
         SELECT transaction_id AS id FROM balance_change WHERE address_id IN (${addressQuery})

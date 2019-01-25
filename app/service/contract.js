@@ -20,7 +20,7 @@ class ContractService extends Service {
           model: QRC20Balance,
           as: 'qrc20Balances',
           required: true,
-          where: {address: {[$in]: {hexAddresses}}},
+          where: {address: {[$in]: hexAddresses}},
           attributes: ['balance']
         }]
       }]
@@ -35,7 +35,7 @@ class ContractService extends Service {
         decimals: item.decimals
       },
       balance: item.contract.qrc20Balances.map(({balance}) => balance).reduce((x, y) => x + y)
-    }))
+    })).filter(({balance}) => balance)
   }
 }
 
