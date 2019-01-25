@@ -348,8 +348,10 @@ class TransactionService extends Service {
       : transaction.inputs.map((input, index) => this.transformInput(input, index, {brief}))
     let outputs = transaction.outputs.map((output, index) => this.transformOutput(output, index, {transaction, brief}))
 
-    let qrc20TokenTransfers = await this.transformQRC20Transfers(transaction.outputs)
-    let qrc721TokenTransfers = await this.transformQRC721Transfers(transaction.outputs)
+    let [qrc20TokenTransfers, qrc721TokenTransfers] = await Promise.all([
+      this.transformQRC20Transfers(transaction.outputs),
+      this.transformQRC721Transfers(transaction.outputs)
+    ])
 
     return {
       id: transaction.id.toString('hex'),
@@ -430,7 +432,7 @@ class TransactionService extends Service {
     let address = Address.fromScript(scriptPubKey, this.app.chain, transaction.id, index)
     if (address) {
       type = address.type
-    } else if (output.scriptPubKey.isDataOut()) {
+    } else if (scriptPubKey.isDataOut()) {
       type = 'nulldata'
     } else {
       type = 'nonstandard'
@@ -472,8 +474,10 @@ class TransactionService extends Service {
       if (output.receipt) {
         for (let {address, addressHex, topics, data, qrc20} of output.receipt.logs) {
           if (qrc20 && topics.length === 3 && Buffer.compare(topics[0], TransferABI.id) === 0 && data.length === 32) {
-            let from = await this.transformHexAddress(topics[1])
-            let to = await this.transformHexAddress(topics[2])
+            let [from, to] = await Promise.all([
+              this.transformHexAddress(topics[1]),
+              this.transformHexAddress(topics[2])
+            ])
             result.push({
               token: {
                 address,
@@ -503,8 +507,10 @@ class TransactionService extends Service {
             qrc721 && [3, 4].includes(topics.length) && Buffer.compare(topics[0], TransferABI.id) === 0
             && (topics[3] || data.length === 32)
           ) {
-            let from = await this.transformHexAddress(topics[1])
-            let to = await this.transformHexAddress(topics[2])
+            let [from, to] = await Promise.all([
+              this.transformHexAddress(topics[1]),
+              this.transformHexAddress(topics[2])
+            ])
             result.push({
               token: {
                 address,

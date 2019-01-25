@@ -92,10 +92,7 @@ class BlockService extends Service {
       attributes: ['id'],
       order: [['indexInBlock', 'ASC']]
     })).map(tx => tx.id)
-    let transactions = []
-    for (let id of transactionIds) {
-      transactions.push(await this.ctx.service.transaction.getRawTransaction(id))
-    }
+    let transactions = await Promise.all(transactionIds.map(id => this.ctx.service.transaction.getRawTransaction(id)))
     return new RawBlock({
       header: new RawHeader({
         version: block.version,

@@ -2,13 +2,14 @@ const {Service} = require('egg')
 
 class AddressService extends Service {
   async getAddressParams(string) {
+    const {app, ctx} = this
     if (!string) {
-      return null
+      ctx.throw(400)
     }
-    const {Address: RawAddress} = this.app.qtuminfo.lib
-    const chain = this.app.chain
-    const {Address} = this.ctx.model
-    const {in: $in} = this.app.Sequelize.Op
+    const {Address: RawAddress} = app.qtuminfo.lib
+    const chain = app.chain
+    const {Address} = ctx.model
+    const {in: $in} = app.Sequelize.Op
 
     let addresses = string.split(',')
     let hexAddresses = []
@@ -19,7 +20,7 @@ class AddressService extends Service {
           hexAddresses.push(rawAddress.data)
         }
       } catch (err) {
-        return null
+        ctx.throw(400)
       }
     }
     let result = await Address.findAll({
