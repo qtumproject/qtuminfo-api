@@ -1,6 +1,27 @@
 const {Controller} = require('egg')
 
 class AddressController extends Controller {
+  async summary() {
+    let {ctx} = this
+    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
+    if (!addressParams) {
+      ctx.throw(400)
+    }
+    let summary = await ctx.service.address.getAddressSummary(
+      addressParams.addressIds, addressParams.p2pkhAddressIds, addressParams.hexAddresses
+    )
+    ctx.body = {
+      balance: summary.balance.toString(),
+      totalReceived: summary.totalReceived.toString(),
+      totalSent: summary.totalSent.toString(),
+      unconfirmed: summary.unconfirmed.toString(),
+      staking: summary.staking.toString(),
+      mature: summary.mature.toString(),
+      transactionCount: summary.transactionCount,
+      blocksMined: summary.blocksMined
+    }
+  }
+
   async balance() {
     let {ctx} = this
     let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)

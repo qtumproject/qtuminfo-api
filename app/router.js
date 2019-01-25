@@ -13,6 +13,7 @@ module.exports = app => {
   router.get('/raw-tx/:id', controller.transaction.rawTransaction)
   router.get('/recent-txs', controller.transaction.recent)
 
+  router.get('/address/:address', controller.address.summary)
   router.get('/address/:address/balance', controller.address.balance)
   router.get('/address/:address/balance/total-received', controller.address.totalReceived)
   router.get('/address/:address/balance/total-sent', controller.address.totalSent)
