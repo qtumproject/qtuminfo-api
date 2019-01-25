@@ -1,5 +1,7 @@
 module.exports = app => {
-  const {router, controller} = app
+  const {router, controller, middleware} = app
+  const pagination = middleware.pagination()
+
   router.get('/info', controller.info.index)
   router.get('/supply', controller.info.supply)
   router.get('/circulating-supply', controller.info.circulatingSupply)
@@ -21,4 +23,5 @@ module.exports = app => {
   router.get('/address/:address/balance/staking', controller.address.stakingBalance)
   router.get('/address/:address/balance/mature', controller.address.matureBalance)
   router.get('/address/:address/utxo', controller.address.utxo)
+  router.get('/address/:address/balance-history', pagination, controller.address.balanceHistory)
 }

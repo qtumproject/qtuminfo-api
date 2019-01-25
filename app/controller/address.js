@@ -76,6 +76,27 @@ class AddressController extends Controller {
       confirmations: utxo.confirmations
     }))
   }
+
+  async balanceHistory() {
+    let {ctx} = this
+    let addressParams = await ctx.service.address.getAddressParams(ctx.params.address)
+    let {totalCount, transactions} = await ctx.service.balance.getBalanceHistory(addressParams.addressIds, ctx.state.pagination)
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(tx => ({
+        id: tx.id.toString('hex'),
+        block: {
+          height: tx.block.height,
+          ...tx.block.hash ? {
+            hash: tx.block.hash.toString('hex'),
+            timestamp: tx.block.timestamp
+          } : {}
+        },
+        amount: tx.amount.toString(),
+        balance: tx.balance.toString()
+      }))
+    }
+  }
 }
 
 module.exports = AddressController

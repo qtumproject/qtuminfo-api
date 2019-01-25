@@ -23,7 +23,9 @@ module.exports = app => {
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
   Transaction.associate = () => {
-    const {Block} = app.model
+    const {Header, Block} = app.model
+    Header.hasMany(Transaction, {as: 'transactions', foreignKey: 'blockHeight'})
+    Transaction.belongsTo(Header, {as: 'header', foreignKey: 'blockHeight'})
     Block.hasMany(Transaction, {as: 'transactions', foreignKey: 'blockHeight'})
     Transaction.belongsTo(Block, {as: 'block', foreignKey: 'blockHeight'})
   }
