@@ -37,7 +37,7 @@ class AddressService extends Service {
   async getAddressSummary(addressIds, p2pkhAddressIds, hexAddresses) {
     const {Block} = this.ctx.model
     const {balance: balanceService} = this.ctx.service
-    const {in: $in} = this.app.Sequelize.Op
+    const {in: $in, gt: $gt} = this.app.Sequelize.Op
     let [
       {totalReceived, totalSent},
       unconfirmed,
@@ -51,7 +51,7 @@ class AddressService extends Service {
       balanceService.getStakingBalance(addressIds),
       balanceService.getMatureBalance(p2pkhAddressIds),
       this.getTransactionCount(addressIds, hexAddresses),
-      Block.count({where: {minerId: {[$in]: p2pkhAddressIds}}})
+      Block.count({where: {minerId: {[$in]: p2pkhAddressIds}, height: {[$gt]: 0}}})
     ])
     return {
       balance: totalReceived - totalSent,
@@ -85,11 +85,12 @@ class AddressService extends Service {
 
   async getUTXO(ids) {
     const {Address, TransactionOutput} = this.ctx.model
-    const {in: $in} = this.app.Sequelize.Op
+    const {in: $in, gt: $gt} = this.app.Sequelize.Op
     const blockHeight = this.app.blockchainInfo.tip.height
     let utxos = await TransactionOutput.findAll({
       where: {
         addressId: {[$in]: ids},
+        outputHeight: {[$gt]: 0},
         inputHeight: null
       },
       attributes: ['outputTxId', 'outputIndex', 'outputHeight', 'scriptPubKey', 'value', 'isStake'],
