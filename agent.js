@@ -44,6 +44,14 @@ module.exports = function(agent) {
   fetchFeeRate()
   setInterval(fetchFeeRate, 60 * 1000).unref()
 
+  let lastRichlistUpdateTipHash = Buffer.alloc(0)
+  function updateRichList() {
+    if (tip && Buffer.compare(lastRichlistUpdateTipHash, tip.hash) !== 0) {
+      agent.messenger.sendRandom('update-richlist')
+    }
+  }
+  setInterval(updateRichList, 2 * 60 * 1000).unref()
+
   agent.messenger.on('blockchain-info', () => {
     agent.messenger.sendToApp('blockchain-info', {tip, stakeWeight, feeRate})
   })

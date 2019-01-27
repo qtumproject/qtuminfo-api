@@ -168,6 +168,25 @@ class AddressService extends Service {
     }
     return {totalCount, transactions}
   }
+
+  async updateRichList() {
+    const db = this.ctx.model
+    const transaction = await db.transaction()
+    try {
+      const blockHeight = this.app.blockchainInfo.tip.height
+      await db.query(`TRUNCATE TABLE rich_list`, {transaction})
+      await db.query(`
+        INSERT INTO rich_list
+        SELECT address_id, SUM(value) AS value FROM transaction_output
+        WHERE address_id > 0 AND (input_height IS NULL OR input_height > ${blockHeight})
+          AND (output_height BETWEEN 1 AND ${blockHeight}) AND value > 0
+        GROUP BY address_id
+      `, {transaction})
+      await transaction.commit()
+    } catch (err) {
+      await transaction.rollback()
+    }
+  }
 }
 
 module.exports = AddressService

@@ -19,4 +19,9 @@ module.exports = app => {
   app.messenger.on('egg-ready', () => {
     app.messenger.sendToAgent('blockchain-info')
   })
+
+  app.messenger.on('update-richlist', async () => {
+    let ctx = app.createAnonymousContext()
+    ctx.service.balance.updateRichList()
+  })
 }
