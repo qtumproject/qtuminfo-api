@@ -43,7 +43,7 @@ class AddressService extends Service {
       unconfirmed,
       staking,
       mature,
-      qrc20TokenBalances,
+      qrc20Balances,
       blocksMined,
       transactionCount
     ] = await Promise.all([
@@ -51,7 +51,7 @@ class AddressService extends Service {
       balanceService.getUnconfirmedBalance(addressIds),
       balanceService.getStakingBalance(addressIds),
       balanceService.getMatureBalance(p2pkhAddressIds),
-      contractService.getAllQRC20TokenBalances(hexAddresses),
+      contractService.getAllQRC20Balances(hexAddresses),
       Block.count({where: {minerId: {[$in]: p2pkhAddressIds}, height: {[$gt]: 0}}}),
       this.getTransactionCount(addressIds, hexAddresses),
     ])
@@ -62,7 +62,7 @@ class AddressService extends Service {
       unconfirmed,
       staking,
       mature,
-      qrc20TokenBalances,
+      qrc20Balances,
       transactionCount,
       blocksMined
     }
