@@ -1,4 +1,5 @@
 const path = require('path')
+const Sequelize = require('sequelize')
 
 exports.keys = 'qtuminfo-api-mainnet'
 
@@ -13,7 +14,8 @@ exports.sequelize = {
   host: 'localhost',
   port: 3306,
   username: 'qtum',
-  password: ''
+  password: '',
+  isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
 }
 
 exports.qtum = {

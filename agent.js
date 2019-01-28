@@ -48,6 +48,7 @@ module.exports = function(agent) {
   function updateRichList() {
     if (tip && Buffer.compare(lastRichlistUpdateTipHash, tip.hash) !== 0) {
       agent.messenger.sendRandom('update-richlist')
+      lastRichlistUpdateTipHash = tip.hash
     }
   }
   setInterval(updateRichList, 2 * 60 * 1000).unref()
