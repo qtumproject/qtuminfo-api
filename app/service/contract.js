@@ -1,14 +1,12 @@
 const {Service} = require('egg')
 
 class ContractService extends Service {
-  async getAllQRC20TokenBalances(hexAddresses) {
+  async getAllQRC20Balances(hexAddresses) {
     if (hexAddresses.length === 0) {
       return []
     }
-
     const {Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance} = this.ctx.model
     const {in: $in} = this.app.Sequelize.Op
-
     let list = await QRC20.findAll({
       attributes: ['contractAddress', 'name', 'symbol', 'decimals'],
       include: [{
@@ -25,7 +23,6 @@ class ContractService extends Service {
         }]
       }]
     })
-
     return list.map(item => ({
       qrc20: {
         address: item.contract.addressString,

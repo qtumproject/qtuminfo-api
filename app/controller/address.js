@@ -13,7 +13,7 @@ class AddressController extends Controller {
       unconfirmed: summary.unconfirmed.toString(),
       staking: summary.staking.toString(),
       mature: summary.mature.toString(),
-      qrc20TokenBalances: summary.qrc20TokenBalances.map(({qrc20, balance}) => ({
+      qrc20Balances: summary.qrc20Balances.map(({qrc20, balance}) => ({
         qrc20: {
           address: qrc20.address,
           addressHex: qrc20.addressHex.toString('hex'),
@@ -81,7 +81,9 @@ class AddressController extends Controller {
 
   async balanceHistory() {
     let {ctx} = this
-    let {totalCount, transactions} = await ctx.service.balance.getBalanceHistory(ctx.state.address.addressIds, ctx.state.pagination)
+    let {totalCount, transactions} = await ctx.service.balance.getBalanceHistory(
+      ctx.state.address.addressIds, ctx.state.pagination
+    )
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({
@@ -97,6 +99,15 @@ class AddressController extends Controller {
         balance: tx.balance.toString()
       }))
     }
+  }
+
+  async qrc20BalanceHistory() {
+    let {ctx} = this
+    let totalCount = await ctx.service.contract.getQRC20BalanceHistory(
+      ctx.state.address.hexAddresses, null, ctx.state.pagination
+    )
+    console.log(totalCount)
+    ctx.body = null
   }
 }
 
