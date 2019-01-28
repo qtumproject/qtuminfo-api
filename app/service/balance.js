@@ -111,54 +111,94 @@ class AddressService extends Service {
     if (totalCount === 0) {
       return {totalCount: 0, transactions: []}
     }
-    let list = await BalanceChange.findAll({
-      where: {addressId: {[$in]: ids}},
-      attributes: [[fn('SUM', col('value')), 'value']],
-      include: [{
-        model: Transaction,
-        as: 'transaction',
-        required: true,
-        where: {blockHeight: {[$gt]: 0}},
-        attributes: ['_id', 'id', 'blockHeight', 'indexInBlock'],
-        include: [{
-          model: Header,
-          as: 'header',
-          required: true,
-          attributes: ['hash', 'timestamp']
-        }]
-      }],
-      group: ['transaction._id'],
-      order: [
-        ['transaction', 'blockHeight', order],
-        ['transaction', 'indexInBlock', order],
-        ['transaction', '_id', order]
-      ],
-      limit,
-      offset
-    })
+    let transactionIds
+    let list
+    if (ids.length === 1) {
+      transactionIds = (await BalanceChange.findAll({
+        where: {addressId: ids[0]},
+        attributes: ['transactionId'],
+        order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]],
+        limit,
+        offset
+      })).map(({transactionId}) => transactionId)
+      list = await BalanceChange.findAll({
+        where: {
+          transactionId: {[$in]: transactionIds},
+          addressId: ids[0]
+        },
+        attributes: ['transactionId', 'blockHeight', 'indexInBlock', 'value'],
+        include: [
+          {
+            model: Header,
+            as: 'header',
+            required: false,
+            attributes: ['hash', 'timestamp']
+          },
+          {
+            model: Transaction,
+            as: 'transaction',
+            required: true,
+            attributes: ['id']
+          }
+        ],
+        order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]]
+      })
+    } else {
+      transactionIds = (await db.query(`
+        SELECT _id FROM transaction WHERE EXISTS (
+          SELECT * FROM balance_change
+          WHERE balance_change.transaction_id = transaction._id AND address_id IN (${ids.join(', ')})
+        ) AND block_height > 0
+        ORDER BY block_height ${order}, index_in_block ${order}, _id ${order}
+        LIMIT ${offset}, ${limit}
+      `, {type: db.QueryTypes.SELECT})).map(({_id}) => _id)
+      list = await BalanceChange.findAll({
+        where: {
+          transactionId: {[$in]: transactionIds},
+          addressId: {[$in]: ids}
+        },
+        attributes: ['transactionId', 'blockHeight', 'indexInBlock', [fn('SUM', col('value')), 'value']],
+        include: [
+          {
+            model: Header,
+            as: 'header',
+            required: false,
+            attributes: ['hash', 'timestamp']
+          },
+          {
+            model: Transaction,
+            as: 'transaction',
+            required: true,
+            attributes: ['id']
+          }
+        ],
+        group: ['_id'],
+        order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]]
+      })
+    }
     if (reversed) {
       list = list.reverse()
     }
     let initialBalance = 0n
     if (list.length > 0) {
-      let {blockHeight, indexInBlock, _id} = list[0].transaction
+      let {blockHeight, indexInBlock, transactionId} = list[0]
       let [{value}] = await db.query(`
-        SELECT SUM(balance.value) AS value FROM transaction tx, balance_change balance
-        WHERE tx._id = balance.transaction_id AND tx.block_height > 0 AND balance.address_id IN (${ids.join(', ')})
-          AND (tx.block_height, tx.index_in_block, tx._id) < (${blockHeight}, ${indexInBlock}, ${_id})
+        SELECT SUM(value) AS value FROM balance_change
+        WHERE address_id IN (${ids.join(', ')})
+          AND (block_height, index_in_block, transaction_id) < (${blockHeight}, ${indexInBlock}, ${transactionId})
       `, {type: db.QueryTypes.SELECT})
       initialBalance = BigInt(value || 0n)
     }
     let transactions = list.map(item => ({
       id: item.transaction.id,
-      ...item.transaction.header ? {
+      ...item.header ? {
         block: {
-          hash: item.transaction.header.hash,
-          height: item.transaction.blockHeight,
-          timestamp: item.transaction.header.timestamp
+          hash: item.header.hash,
+          height: item.blockHeight,
+          timestamp: item.header.timestamp
         }
       } : {block: {height: 0xffffffff}},
-      amount: item.value,
+      amount: BigInt(item.getDataValue('value')),
     }))
     for (let tx of transactions) {
       tx.balance = initialBalance += tx.amount

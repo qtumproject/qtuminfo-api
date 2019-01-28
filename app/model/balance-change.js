@@ -1,11 +1,13 @@
 module.exports = app => {
-  const {BIGINT} = app.Sequelize
+  const {INTEGER, BIGINT} = app.Sequelize
 
   let BalanceChange = app.model.define('balance_change', {
     transactionId: {
       type: BIGINT.UNSIGNED,
       primaryKey: true
     },
+    blockHeight: INTEGER.UNSIGNED,
+    indexInBlock: INTEGER.UNSIGNED,
     addressId: {
       type: BIGINT.UNSIGNED,
       primaryKey: true
@@ -23,11 +25,12 @@ module.exports = app => {
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
   BalanceChange.associate = () => {
-    const {Address, Transaction} = app.model
+    const {Header, Address, Transaction} = app.model
     Transaction.hasMany(BalanceChange, {as: 'balanceChanges', foreignKey: 'transactionId'})
     BalanceChange.belongsTo(Transaction, {as: 'transaction', foreignKey: 'transactionId'})
     Address.hasOne(BalanceChange, {as: 'balanceChanges', foreignKey: 'addressId'})
     BalanceChange.belongsTo(Address, {as: 'address', foreignKey: 'addressId'})
+    BalanceChange.belongsTo(Header, {as: 'header', foreignKey: 'blockHeight'})
   }
 
   return BalanceChange
