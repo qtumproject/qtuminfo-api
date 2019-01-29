@@ -9,11 +9,11 @@ module.exports = app => {
     balance: {
       type: BIGINT,
       get() {
-        let value = this.getDataValue('value')
-        return value == null ? null : BigInt(value)
+        let balance = this.getDataValue('balance')
+        return balance == null ? null : BigInt(balance)
       },
-      set(value) {
-        return this.setDataValue('value', value.toString())
+      set(balance) {
+        return this.setDataValue('balance', balance.toString())
       }
     }
   }, {freezeTableName: true, underscored: true, timestamps: false})

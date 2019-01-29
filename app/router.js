@@ -25,4 +25,6 @@ module.exports = app => {
   router.get('/address/:address/utxo', addressMiddleware(), controller.address.utxo)
   router.get('/address/:address/balance-history', addressMiddleware(), paginationMiddleware(), controller.address.balanceHistory)
   router.get('/address/:address/qrc20-balance-history', addressMiddleware(), paginationMiddleware(), controller.address.qrc20BalanceHistory)
+
+  router.get('/misc/rich-list', paginationMiddleware(), controller.misc.richList)
 }
