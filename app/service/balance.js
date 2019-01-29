@@ -197,7 +197,7 @@ class AddressService extends Service {
           height: item.blockHeight,
           timestamp: item.header.timestamp
         }
-      } : {block: {height: 0xffffffff}},
+      } : {},
       amount: BigInt(item.getDataValue('value')),
     }))
     for (let tx of transactions) {
