@@ -214,10 +214,12 @@ class AddressService extends Service {
 
   async updateRichList() {
     const db = this.ctx.model
-    const transaction = await db.transaction()
+    const transaction = await db.transaction({
+      isolationLevel: this.app.Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
+    })
     try {
       const blockHeight = this.app.blockchainInfo.tip.height
-      await db.query(`TRUNCATE TABLE rich_list`, {transaction})
+      await db.query(`DELETE FROM rich_list`, {transaction})
       await db.query(`
         INSERT INTO rich_list
         SELECT address_id, SUM(value) AS value FROM transaction_output

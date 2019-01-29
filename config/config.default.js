@@ -14,8 +14,7 @@ exports.sequelize = {
   host: 'localhost',
   port: 3306,
   username: 'qtum',
-  password: '',
-  isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
+  password: ''
 }
 
 exports.qtum = {
