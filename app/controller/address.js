@@ -88,13 +88,13 @@ class AddressController extends Controller {
       totalCount,
       transactions: transactions.map(tx => ({
         id: tx.id.toString('hex'),
-        block: {
-          height: tx.block.height,
-          ...tx.block.hash ? {
+        ...tx.block ? {
+          block: {
             hash: tx.block.hash.toString('hex'),
+            height: tx.block.height,
             timestamp: tx.block.timestamp
-          } : {}
-        },
+          }
+        } : {},
         amount: tx.amount.toString(),
         balance: tx.balance.toString()
       }))
@@ -103,11 +103,33 @@ class AddressController extends Controller {
 
   async qrc20BalanceHistory() {
     let {ctx} = this
-    let totalCount = await ctx.service.contract.getQRC20BalanceHistory(
+    let {totalCount, transactions} = await ctx.service.contract.getQRC20BalanceHistory(
       ctx.state.address.hexAddresses, null, ctx.state.pagination
     )
-    console.log(totalCount)
-    ctx.body = null
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(tx => ({
+        id: tx.id.toString('hex'),
+        ...tx.block ? {
+          block: {
+            hash: tx.block.hash.toString('hex'),
+            height: tx.block.height,
+            timestamp: tx.block.timestamp
+          }
+        } : {},
+        tokens: tx.tokens.map(({qrc20, amount, balance}) => ({
+          qrc20: {
+            address: qrc20.address,
+            addressHex: qrc20.addressHex.toString('hex'),
+            name: qrc20.name,
+            symbol: qrc20.symbol,
+            decimals: qrc20.decimals
+          },
+          amount: amount.toString(),
+          balance: balance.toString()
+        }))
+      }))
+    }
   }
 }
 

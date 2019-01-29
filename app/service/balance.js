@@ -99,6 +99,7 @@ class AddressService extends Service {
     let limit = pageSize
     let offset = pageIndex * pageSize
     let order = reversed ? 'DESC' : 'ASC'
+
     let {id: genesisTransactionId} = await Transaction.findOne({where: {blockHeight: 0}, attributes: ['id']})
     let totalCount = await BalanceChange.count({
       where: {
@@ -111,6 +112,7 @@ class AddressService extends Service {
     if (totalCount === 0) {
       return {totalCount: 0, transactions: []}
     }
+
     let transactionIds
     let list
     if (ids.length === 1) {
@@ -176,6 +178,7 @@ class AddressService extends Service {
         order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]]
       })
     }
+
     if (reversed) {
       list = list.reverse()
     }

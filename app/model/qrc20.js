@@ -30,7 +30,7 @@ module.exports = app => {
   QRC20.associate = () => {
     const {ReceiptLog, Contract} = app.model
     ReceiptLog.belongsTo(QRC20, {as: 'qrc20', foreignKey: 'address', sourceKey: 'contractAddress'})
-    QRC20.hasOne(ReceiptLog, {as: 'eventLogs', foreignKey: 'address', sourceKey: 'contractAddress'})
+    QRC20.hasMany(ReceiptLog, {as: 'eventLogs', foreignKey: 'address', sourceKey: 'contractAddress'})
     Contract.hasOne(QRC20, {as: 'qrc20', foreignKey: 'contractAddress'})
     QRC20.belongsTo(Contract, {as: 'contract', foreignKey: 'contractAddress'})
   }
