@@ -67,30 +67,30 @@ class ContractService extends Service {
       return {totalCount: 0, transactions: []}
     }
     let ids = (await db.query(`
-      SELECT transaction.id AS id FROM transaction
+      SELECT transaction_id AS id FROM receipt
       INNER JOIN (
         SELECT DISTINCT(receipt.transaction_id) AS id FROM receipt, receipt_log, qrc20
         WHERE receipt._id = receipt_log.receipt_id AND receipt_log.address = qrc20.contract_address AND ${logFilter}
-      ) list ON list.id = transaction.id
-      ORDER BY block_height ${order}, index_in_block ${order}
+      ) list ON list.id = receipt.transaction_id
+      ORDER BY receipt.block_height ${order}, receipt.index_in_block ${order}
       LIMIT ${offset}, ${limit}
     `, {type: db.QueryTypes.SELECT})).map(({id}) => id)
 
     let list = await Receipt.findAll({
       where: {transactionId: {[$in]: ids}},
-      attributes: [],
+      attributes: ['blockHeight', 'indexInBlock'],
       include: [
+        {
+          model: Header,
+          as: 'header',
+          required: false,
+          attributes: ['hash', 'timestamp']
+        },
         {
           model: Transaction,
           as: 'transaction',
           required: true,
-          attributes: ['_id', 'id', 'blockHeight', 'indexInBlock'],
-          include: [{
-            model: Header,
-            as: 'header',
-            required: false,
-            attributes: ['hash', 'timestamp']
-          }]
+          attributes: ['id']
         },
         {
           model: ReceiptLog,
@@ -123,11 +123,7 @@ class ContractService extends Service {
           ]
         }
       ],
-      order: [
-        ['transaction', 'blockHeight', order],
-        ['transaction', 'indexInBlock', order],
-        ['transaction', '_id', order]
-      ]
+      order: [['blockHeight', order], ['indexInBlock', order]]
     })
 
     if (!reversed) {
@@ -152,7 +148,7 @@ class ContractService extends Service {
         let address = contract.addressString
         initialBalanceMap.set(address, (initialBalanceMap.get(address) || 0n) + balance)
       }
-      let {blockHeight, indexInBlock, _id} = list[0].transaction
+      let {blockHeight, indexInBlock} = list[0]
       let latestLogs = await ReceiptLog.findAll({
         where: {
           ...tokens ? {address: {[$in]: tokens}} : {},
@@ -170,18 +166,9 @@ class ContractService extends Service {
             model: Receipt,
             as: 'receipt',
             required: true,
-            include: [{
-              model: Transaction,
-              as: 'transaction',
-              required: true,
-              where: {
-                [$and]: literal(`
-                  (\`receipt->transaction\`.block_height, \`receipt->transaction\`.index_in_block, \`receipt->transaction\`._id)
-                  > (${blockHeight}, ${indexInBlock}, ${_id})
-                `)
-              },
-              attributes: []
-            }]
+            where: {
+              [$and]: literal(`(receipt.block_height, receipt.index_in_block) > (${blockHeight}, ${indexInBlock})`)
+            }
           },
           {
             model: Contract,
@@ -205,17 +192,15 @@ class ContractService extends Service {
       }
     }
 
-    let transactions = list.map(({transaction, logs}) => {
+    let transactions = list.map(({blockHeight, header, transaction, logs}) => {
       let result = {
         id: transaction.id,
+        block: {
+          hash: header.hash,
+          height: blockHeight,
+          timestamp: header.timestamp
+        },
         tokens: []
-      }
-      if (transaction.header) {
-        result.block = {
-          hash: transaction.header.hash,
-          height: transaction.blockHeight,
-          timestamp: transaction.header.timestamp
-        }
       }
       for (let log of logs) {
         let address = log.contract.addressString

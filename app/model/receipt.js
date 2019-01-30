@@ -9,9 +9,11 @@ module.exports = app => {
       autoIncrement: true
     },
     transactionId: {
-      type: CHAR(32).BINARY,
+      type: BIGINT.UNSIGNED,
       unique: 'transaction'
     },
+    blockHeight: INTEGER.UNSIGNED,
+    indexInBlock: INTEGER.UNSIGNED,
     outputIndex: {
       type: INTEGER.UNSIGNED,
       unique: 'transaction'
@@ -29,9 +31,10 @@ module.exports = app => {
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
   Receipt.associate = () => {
-    const {Transaction, TransactionOutput} = app.model
-    Transaction.hasMany(Receipt, {as: 'receipts', foreignKey: 'transactionId', sourceKey: 'id'})
-    Receipt.belongsTo(Transaction, {as: 'transaction', foreignKey: 'transactionId', targetKey: 'id'})
+    const {Header, Transaction, TransactionOutput} = app.model
+    Receipt.belongsTo(Header, {as: 'header', foreignKey: 'blockHeight'})
+    Transaction.hasMany(Receipt, {as: 'receipts', foreignKey: 'transactionId'})
+    Receipt.belongsTo(Transaction, {as: 'transaction', foreignKey: 'transactionId'})
     TransactionOutput.hasOne(Receipt, {as: 'receipt', foreignKey: 'transactionId', sourceKey: 'outputTxId'})
     Receipt.belongsTo(TransactionOutput, {as: 'transactionOutput', foreignKey: 'transactionId', targetKey: 'outputTxId'})
   }

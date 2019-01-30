@@ -44,16 +44,42 @@ class AddressService extends Service {
     let addressQuery = addressIds.join(', ') || 'NULL'
     let topicQuery = hexAddresses.map(address => `0x${'0'.repeat(24) + address.toString('hex')}`).join(', ') || 'NULL'
     let [{count}] = await db.query(`
-      SELECT COUNT(DISTINCT(id)) AS count FROM (
-        SELECT transaction_id AS id FROM balance_change WHERE address_id IN (${addressQuery})
-        UNION ALL
-        SELECT receipt.transaction_id AS id FROM receipt, receipt_log
+      SELECT COUNT(*) AS count FROM (
+        SELECT transaction_id FROM balance_change WHERE address_id IN (${addressQuery})
+        UNION
+        SELECT receipt.transaction_id AS transaction_id FROM receipt, receipt_log, contract
         WHERE receipt._id = receipt_log.receipt_id
+          AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
           AND receipt_log.topic1 = 0x${TransferABI.id.toString('hex')}
           AND (receipt_log.topic2 IN (${topicQuery}) OR receipt_log.topic3 IN (${topicQuery}))
       ) AS list
     `, {type: db.QueryTypes.SELECT})
     return count
+  }
+
+  async getAddressTransactions(addressIds, hexAddresses, {pageSize = 10, pageIndex = 0, reversed = true} = {}) {
+    const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+    const db = this.ctx.model
+    let limit = pageSize
+    let offset = pageIndex * pageSize
+    let order = reversed ? 'DESC' : 'ASC'
+    let addressQuery = addressIds.join(', ') || 'NULL'
+    let topicQuery = hexAddresses.map(address => `0x${'0'.repeat(24) + address.toString('hex')}`).join(', ') || 'NULL'
+    let totalCount = await this.getAddressTransactionCount(addressIds, hexAddresses)
+    let transactions = (await db.query(`
+      SELECT tx.id FROM (
+        SELECT transaction_id AS id FROM balance_change WHERE address_id IN (${addressQuery})
+        UNION
+        SELECT receipt.transaction_id AS id FROM receipt, receipt_log, contract
+        WHERE receipt._id = receipt_log.receipt_id
+          AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
+          AND receipt_log.topic1 = 0x${TransferABI.id.toString('hex')}
+          AND (receipt_log.topic2 IN (${topicQuery}) OR receipt_log.topic3 IN (${topicQuery}))
+      ) AS list INNER JOIN transaction tx ON tx._id = list.id
+      ORDER BY tx.block_height ${order}, tx.index_in_block ${order}, tx._id ${order}
+      LIMIT ${offset}, ${limit}
+    `, {type: db.QueryTypes.SELECT})).map(({id}) => id)
+    return {totalCount, transactions}
   }
 
   async getUTXO(ids) {
