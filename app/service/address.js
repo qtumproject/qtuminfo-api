@@ -1,39 +1,6 @@
 const {Service} = require('egg')
 
 class AddressService extends Service {
-  async getAddressParams(string) {
-    const {app, ctx} = this
-    if (!string) {
-      ctx.throw(400)
-    }
-    const {Address: RawAddress} = app.qtuminfo.lib
-    const chain = app.chain
-    const {Address} = ctx.model
-    const {in: $in} = app.Sequelize.Op
-
-    let addresses = string.split(',')
-    let hexAddresses = []
-    for (let address of addresses) {
-      try {
-        let rawAddress = RawAddress.fromString(address, chain)
-        if (rawAddress.type === RawAddress.PAY_TO_PUBLIC_KEY_HASH) {
-          hexAddresses.push(rawAddress.data)
-        }
-      } catch (err) {
-        ctx.throw(400)
-      }
-    }
-    let result = await Address.findAll({
-      where: {string: {[$in]: addresses}},
-      attributes: ['_id', 'type', 'data']
-    })
-    return {
-      addressIds: result.map(address => address._id),
-      p2pkhAddressIds: result.filter(address => address.type === RawAddress.PAY_TO_PUBLIC_KEY_HASH).map(address => address._id),
-      hexAddresses
-    }
-  }
-
   async getAddressSummary(addressIds, p2pkhAddressIds, hexAddresses) {
     const {Block} = this.ctx.model
     const {balance: balanceService, contract: contractService} = this.ctx.service
@@ -53,7 +20,7 @@ class AddressService extends Service {
       balanceService.getMatureBalance(p2pkhAddressIds),
       contractService.getAllQRC20Balances(hexAddresses),
       Block.count({where: {minerId: {[$in]: p2pkhAddressIds}, height: {[$gt]: 0}}}),
-      this.getTransactionCount(addressIds, hexAddresses),
+      this.getAddressTransactionCount(addressIds, hexAddresses),
     ])
     return {
       balance: totalReceived - totalSent,
@@ -68,7 +35,7 @@ class AddressService extends Service {
     }
   }
 
-  async getTransactionCount(addressIds, hexAddresses) {
+  async getAddressTransactionCount(addressIds, hexAddresses) {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
     let addressQuery = addressIds.join(', ') || 'NULL'

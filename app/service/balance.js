@@ -1,6 +1,6 @@
 const {Service} = require('egg')
 
-class AddressService extends Service {
+class BalanceService extends Service {
   async getBalance(ids) {
     const {TransactionOutput} = this.ctx.model
     const {in: $in, gt: $gt} = this.app.Sequelize.Op
@@ -257,4 +257,4 @@ class AddressService extends Service {
   }
 }
 
-module.exports = AddressService
+module.exports = BalanceService

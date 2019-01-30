@@ -1,5 +1,4 @@
 const path = require('path')
-const Sequelize = require('sequelize')
 
 exports.keys = 'qtuminfo-api-mainnet'
 
