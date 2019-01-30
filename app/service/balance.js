@@ -255,6 +255,20 @@ class BalanceService extends Service {
       await transaction.rollback()
     }
   }
+
+  async getBalanceRanking(addressIds) {
+    if (addressIds.length !== 1) {
+      return null
+    }
+    const {RichList} = this.ctx.model
+    const {gt: $gt} = this.app.Sequelize.Op
+    let item = await RichList.findOne({where: {addressId: addressIds[0]}, attributes: ['balance']})
+    if (item == null) {
+      return null
+    } else {
+      return await RichList.count({where: {balance: {[$gt]: item.balance.toString()}}}) + 1
+    }
+  }
 }
 
 module.exports = BalanceService

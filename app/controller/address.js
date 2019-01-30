@@ -23,6 +23,7 @@ class AddressController extends Controller {
         },
         balance: balance.toString()
       })),
+      ranking: summary.ranking,
       transactionCount: summary.transactionCount,
       blocksMined: summary.blocksMined
     }
