@@ -24,14 +24,13 @@ class BalanceService extends Service {
     const db = this.ctx.model
     let totalReceived
     let totalSent
-    let {id: genesisTxId} = await db.Transaction.findOne({where: {blockHeight: 0}, attributes: ['id']})
     if (ids.length === 1) {
       let id = ids[0]
       let [result] = await db.query(`
         SELECT
           SUM(CAST(GREATEST(value, 0) AS DECIMAL(24))) AS totalReceived,
           SUM(CAST(GREATEST(-value, 0) AS DECIMAL(24))) AS totalSent
-        FROM balance_change WHERE address_id = ${id} AND transaction_id != 0x${genesisTxId.toString('hex')}
+        FROM balance_change WHERE address_id = ${id} AND block_height > 0
       `, {type: db.QueryTypes.SELECT})
       totalReceived = result.totalReceived == null ? 0n : BigInt(result.totalReceived)
       totalSent = result.totalSent == null ? 0n : BigInt(result.totalSent)
@@ -42,7 +41,7 @@ class BalanceService extends Service {
           SUM(CAST(GREATEST(-value, 0) AS DECIMAL(24))) AS totalSent
         FROM (
           SELECT SUM(value) AS value FROM balance_change
-          WHERE address_id IN (${ids.join(', ')}) AND transaction_id != 0x${genesisTxId.toString('hex')}
+          WHERE address_id IN (${ids.join(', ')}) AND block_height > 0
           GROUP BY transaction_id
         ) AS temp
       `, {type: db.QueryTypes.SELECT})
@@ -97,16 +96,15 @@ class BalanceService extends Service {
     }
     const db = this.ctx.model
     const {Header, Transaction, BalanceChange, fn, col} = db
-    const {ne: $ne, in: $in, gt: $gt} = this.app.Sequelize.Op
+    const {in: $in, gt: $gt} = this.app.Sequelize.Op
     let limit = pageSize
     let offset = pageIndex * pageSize
     let order = reversed ? 'DESC' : 'ASC'
 
-    let {id: genesisTransactionId} = await Transaction.findOne({where: {blockHeight: 0}, attributes: ['id']})
     let totalCount = await BalanceChange.count({
       where: {
         addressId: {[$in]: ids},
-        transactionId: {[$ne]: genesisTransactionId}
+        blockHeight: {[$gt]: 0}
       },
       distinct: true,
       col: 'transactionId'
