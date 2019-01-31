@@ -1,6 +1,6 @@
 module.exports = () => async function pagination(ctx, next) {
   if (!ctx.params.address) {
-    ctx.throw(400)
+    ctx.throw(404)
   }
   const {Address: RawAddress} = ctx.app.qtuminfo.lib
   const chain = ctx.app.chain

@@ -4,12 +4,14 @@ class BlockController extends Controller {
   async block() {
     const {ctx} = this
     let arg = ctx.params.block
-    if (/^(0|[1-9]\d{0,9})$/.test(arg)) {
+    if (!arg) {
+      ctx.throw(404)
+    } else if (/^(0|[1-9]\d{0,9})$/.test(arg)) {
       arg = Number(arg)
-    } else if (/^[0-9a-f]{64}$/.test(arg)) {
+    } else if (/^[0-9a-f]{64}$/i.test(arg)) {
       arg = Buffer.from(arg, 'hex')
     } else {
-      ctx.throw(404)
+      ctx.throw(400)
     }
     let block = await ctx.service.block.getBlock(arg)
     if (!block) {
@@ -46,12 +48,14 @@ class BlockController extends Controller {
   async rawBlock() {
     const {ctx} = this
     let arg = ctx.params.block
-    if (/^(0|[1-9]\d{0,9})$/.test(arg)) {
+    if (!arg) {
+      ctx.throw(404)
+    } else if (/^(0|[1-9]\d{0,9})$/.test(arg)) {
       arg = Number(arg)
-    } else if (/^[0-9a-f]{64}$/.test(arg)) {
+    } else if (/^[0-9a-f]{64}$/i.test(arg)) {
       arg = Buffer.from(arg, 'hex')
     } else {
-      ctx.throw(404)
+      ctx.throw(400)
     }
     let block = await ctx.service.block.getRawBlock(arg)
     if (!block) {

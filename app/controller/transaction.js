@@ -3,8 +3,10 @@ const {Controller} = require('egg')
 class TransactionController extends Controller {
   async transaction() {
     const {ctx} = this
-    if (!/^[0-9a-f]{64}$/.test(ctx.params.id)) {
+    if (!ctx.params.id) {
       ctx.throw(404)
+    } else if (!/^[0-9a-f]{64}$/i.test(ctx.params.id)) {
+      ctx.throw(400)
     }
     let brief = 'brief' in ctx.query
     let id = Buffer.from(ctx.params.id, 'hex')
@@ -21,10 +23,8 @@ class TransactionController extends Controller {
       ctx.throw(404)
     }
     let ids = ctx.params.ids.split(',')
-    if (ids.length > 100) {
+    if (ids.length > 100 || !ids.some(id => !/^[0-9a-f]{64}$/i.test(id))) {
       ctx.throw(400)
-    } else if (!ids.some(id => !/^[0-9a-f]{64}$/i.test(id))) {
-      ctx.throw(404)
     }
     let brief = 'brief' in ctx.query
     let transactions = await Promise.all(ids.map(
