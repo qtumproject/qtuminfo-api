@@ -230,6 +230,36 @@ class BlockService extends Service {
     }
     return blocks
   }
+
+  async getBiggestMiners(lastNBlocks, {pageSize = 100, pageIndex = 0} = {}) {
+    const db = this.ctx.model
+    const {Block} = db
+    const {gte: $gte} = this.app.Sequelize.Op
+    let fromBlockHeight = lastNBlocks == null ? 5001 : Math.max(this.app.blockchainInfo.height - lastNBlocks + 1, 5001)
+    let limit = pageSize
+    let offset = pageIndex * pageSize
+    let totalCount = await Block.count({
+      where: {height: {[$gte]: fromBlockHeight}},
+      distinct: true,
+      col: 'minerId',
+      transaction: this.ctx.state.transaction
+    })
+    let list = await db.query(`
+      SELECT address.string AS address, list.blocks AS blocks, rich_list.balance AS balance FROM (
+        SELECT miner_id, COUNT(*) AS blocks FROM block
+        WHERE height >= ${fromBlockHeight}
+        GROUP BY miner_id
+        ORDER BY blocks DESC
+        LIMIT ${offset}, ${limit}
+      ) list
+      INNER JOIN address ON address._id = list.miner_id
+      LEFT JOIN rich_list ON rich_list.address_id = address._id
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    return {
+      totalCount,
+      list: list.map(({address, blocks, balance}) => ({address, blocks, balance: BigInt(balance || 0)}))
+    }
+  }
 }
 
 module.exports = BlockService

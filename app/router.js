@@ -78,4 +78,10 @@ module.exports = app => {
     paginationMiddleware,
     controller.misc.richList
   )
+
+  router.get(
+    '/misc/biggest-miners',
+    paginationMiddleware,
+    controller.misc.biggestMiners
+  )
 }

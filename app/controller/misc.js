@@ -12,6 +12,23 @@ class MiscController extends Controller {
       }))
     }
   }
+
+  async biggestMiners() {
+    let {ctx} = this
+    let lastNBlocks = null
+    if (ctx.query.blocks && /^[1-9]\d*$/.test(ctx.query.blocks)) {
+      lastNBlocks = Number.parseInt(ctx.query.blocks)
+    }
+    let {totalCount, list} = await ctx.service.block.getBiggestMiners(lastNBlocks, ctx.state.pagination)
+    ctx.body = {
+      totalCount,
+      list: list.map(item => ({
+        address: item.address,
+        blocks: item.blocks,
+        balance: item.balance.toString()
+      }))
+    }
+  }
 }
 
 module.exports = MiscController
