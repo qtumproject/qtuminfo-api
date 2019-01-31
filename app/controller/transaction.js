@@ -15,6 +15,29 @@ class TransactionController extends Controller {
     ctx.body = await ctx.service.transaction.transformTransaction(transaction, {brief})
   }
 
+  async transactions() {
+    const {ctx} = this
+    if (!ctx.params.ids) {
+      ctx.throw(404)
+    }
+    let ids = ctx.params.ids.split(',')
+    if (ids.length > 100) {
+      ctx.throw(400)
+    } else if (!ids.some(id => !/^[0-9a-f]{64}$/i.test(id))) {
+      ctx.throw(404)
+    }
+    let brief = 'brief' in ctx.query
+    let transactions = await Promise.all(ids.map(
+      id => ctx.service.transaction.getTransaction(Buffer.from(id, 'hex'))
+    ))
+    if (!transactions.every(Boolean)) {
+      ctx.throw(404)
+    }
+    ctx.body = await Promise.all(transactions.map(
+      tx => ctx.service.transaction.transformTransaction(tx, {brief})
+    ))
+  }
+
   async rawTransaction() {
     const {ctx} = this
     if (!/^[0-9a-f]{64}$/.test(ctx.params.id)) {
