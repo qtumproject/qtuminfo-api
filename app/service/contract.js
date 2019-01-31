@@ -36,7 +36,7 @@ class ContractService extends Service {
     })).filter(({balance}) => balance)
   }
 
-  async getQRC20BalanceHistory(addresses, tokens, {pageSize = 100, pageIndex = 0, reversed = true} = {}) {
+  async getQRC20BalanceHistory(addresses, tokens) {
     if (addresses.length === 0 || tokens && tokens.length === 0) {
       return {totalCount: 0, transactions: []}
     }
@@ -47,8 +47,7 @@ class ContractService extends Service {
     const db = this.ctx.model
     const {Header, Transaction, Receipt, ReceiptLog, Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance, literal} = db
     const {ne: $ne, and: $and, or: $or, in: $in} = this.app.Sequelize.Op
-    let limit = pageSize
-    let offset = pageIndex * pageSize
+    let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
     let logFilter = [
       ...tokens ? [`receipt_log.address IN (${tokens.map(token => `0x${token.toString('hex')}`).join(', ')})`] : [],

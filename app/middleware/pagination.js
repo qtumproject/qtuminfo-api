@@ -1,23 +1,39 @@
-module.exports = () => async function pagination(ctx, next) {
+module.exports = ({defaultPageSize = 100} = {}) => async function pagination(ctx, next) {
   if (!['GET', 'POST'].includes(ctx.method)) {
     return await next()
   }
   let object = {GET: ctx.query, POST: ctx.request.body}[ctx.method]
-  ctx.state.pagination = {}
-  if ('pageSize' in object) {
-    ctx.state.pagination.pageSize = Number.parseInt(object.pageSize)
-    if (!(ctx.state.pagination.pageSize > 0)) {
-      ctx.throw(400)
-    }
+  let limit = defaultPageSize
+  let offset = 0
+  let reversed
+  if ('limit' in object && 'offset' in object) {
+    limit = Number.parseInt(object.limit)
+    offset = Number.parseInt(object.offset)
   }
-  if ('page' in object) {
-    ctx.state.pagination.pageIndex = Number.parseInt(object.page)
-    if (!(ctx.state.pagination.pageIndex >= 0)) {
-      ctx.throw(400)
-    }
+  if ('pageSize' in object && 'pageIndex' in object) {
+    let pageSize = Number.parseInt(object.pageSize)
+    let pageIndex = Number.parseInt(object.pageIndex)
+    limit = pageSize
+    offset = pageSize * pageIndex
+  }
+  if ('pageSize' in object && 'page' in object) {
+    let pageSize = Number.parseInt(object.pageSize)
+    let pageIndex = Number.parseInt(object.page)
+    limit = pageSize
+    offset = pageSize * pageIndex
+  }
+  if ('from' in object && 'to' in object) {
+    let from = Number.parseInt(object.from)
+    let to = Number.parseInt(object.to)
+    limit = to - from + 1
+    offset = from
+  }
+  if (!(limit > 0) || !(offset >= 0)) {
+    ctx.throw(400)
   }
   if ('reversed' in object) {
-    ctx.state.pagination.reversed = ![false, 'false', 0, '0'].includes(object.reversed)
+    reversed = ![false, 'false', 0, '0'].includes(object.reversed)
   }
+  ctx.state.pagination = {limit, offset, reversed}
   await next()
 }

@@ -3,9 +3,8 @@ const {Controller} = require('egg')
 class AddressController extends Controller {
   async summary() {
     let {ctx} = this
-    let summary = await ctx.service.address.getAddressSummary(
-      ctx.state.address.addressIds, ctx.state.address.p2pkhAddressIds, ctx.state.address.hexAddresses
-    )
+    let {address} = ctx.state
+    let summary = await ctx.service.address.getAddressSummary(address.addressIds, address.p2pkhAddressIds, address.hexAddresses)
     ctx.body = {
       balance: summary.balance.toString(),
       totalReceived: summary.totalReceived.toString(),
@@ -67,8 +66,8 @@ class AddressController extends Controller {
 
   async transactions() {
     let {ctx} = this
-    let {address, pagination} = ctx.state
-    let {totalCount, transactions} = await ctx.service.address.getAddressTransactions(address.addressIds, address.hexAddresses, pagination)
+    let {address} = ctx.state
+    let {totalCount, transactions} = await ctx.service.address.getAddressTransactions(address.addressIds, address.hexAddresses)
     ctx.body = {
       totalCount,
       transactions: transactions.map(id => id.toString('hex'))
@@ -92,9 +91,7 @@ class AddressController extends Controller {
 
   async balanceHistory() {
     let {ctx} = this
-    let {totalCount, transactions} = await ctx.service.balance.getBalanceHistory(
-      ctx.state.address.addressIds, ctx.state.pagination
-    )
+    let {totalCount, transactions} = await ctx.service.balance.getBalanceHistory(ctx.state.address.addressIds)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({
@@ -114,9 +111,7 @@ class AddressController extends Controller {
 
   async qrc20BalanceHistory() {
     let {ctx} = this
-    let {totalCount, transactions} = await ctx.service.contract.getQRC20BalanceHistory(
-      ctx.state.address.hexAddresses, null, ctx.state.pagination
-    )
+    let {totalCount, transactions} = await ctx.service.contract.getQRC20BalanceHistory(ctx.state.address.hexAddresses, null)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({

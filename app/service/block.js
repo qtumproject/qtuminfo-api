@@ -231,13 +231,12 @@ class BlockService extends Service {
     return blocks
   }
 
-  async getBiggestMiners(lastNBlocks, {pageSize = 100, pageIndex = 0} = {}) {
+  async getBiggestMiners(lastNBlocks) {
     const db = this.ctx.model
     const {Block} = db
     const {gte: $gte} = this.app.Sequelize.Op
     let fromBlockHeight = lastNBlocks == null ? 5001 : Math.max(this.app.blockchainInfo.height - lastNBlocks + 1, 5001)
-    let limit = pageSize
-    let offset = pageIndex * pageSize
+    let {limit, offset} = this.ctx.state.pagination
     let totalCount = await Block.count({
       where: {height: {[$gte]: fromBlockHeight}},
       distinct: true,

@@ -94,15 +94,14 @@ class BalanceService extends Service {
     return BigInt(result || 0)
   }
 
-  async getBalanceHistory(ids, {pageSize = 100, pageIndex = 0, reversed = true} = {}) {
+  async getBalanceHistory(ids) {
     if (ids.length === 0) {
       return []
     }
     const db = this.ctx.model
     const {Header, Transaction, BalanceChange, fn, col} = db
     const {in: $in, gt: $gt} = this.app.Sequelize.Op
-    let limit = pageSize
-    let offset = pageIndex * pageSize
+    let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
 
     let totalCount = await BalanceChange.count({
@@ -220,11 +219,10 @@ class BalanceService extends Service {
     return {totalCount, transactions}
   }
 
-  async getRichList({pageSize = 100, pageIndex = 0}) {
+  async getRichList() {
     const db = this.ctx.model
     const {RichList} = db
-    let limit = pageSize
-    let offset = pageIndex * pageSize
+    let {limit, offset} = this.ctx.state.pagination
     let totalCount = await RichList.count({transaction: this.ctx.state.transaction})
     let list = await db.query(`
       SELECT address.string AS address, rich_list.balance AS balance FROM (

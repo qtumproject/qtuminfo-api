@@ -1,4 +1,4 @@
-module.exports = () => async function pagination(ctx, next) {
+module.exports = () => async function address(ctx, next) {
   if (!ctx.params.address) {
     ctx.throw(404)
   }

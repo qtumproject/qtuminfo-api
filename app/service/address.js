@@ -57,11 +57,10 @@ class AddressService extends Service {
     return count
   }
 
-  async getAddressTransactions(addressIds, hexAddresses, {pageSize = 10, pageIndex = 0, reversed = true} = {}) {
+  async getAddressTransactions(addressIds, hexAddresses) {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
-    let limit = pageSize
-    let offset = pageIndex * pageSize
+    let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
     let addressQuery = addressIds.join(', ') || 'NULL'
     let topicQuery = hexAddresses.map(address => `0x${'0'.repeat(24) + address.toString('hex')}`).join(', ') || 'NULL'
