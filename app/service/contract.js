@@ -21,7 +21,8 @@ class ContractService extends Service {
           where: {address: {[$in]: hexAddresses}},
           attributes: ['balance']
         }]
-      }]
+      }],
+      transaction: this.ctx.state.transaction
     })
     return list.map(item => ({
       qrc20: {
@@ -61,7 +62,7 @@ class ContractService extends Service {
       SELECT COUNT(DISTINCT(receipt.transaction_id)) AS totalCount
       FROM receipt, receipt_log, qrc20
       WHERE receipt._id = receipt_log.receipt_id AND receipt_log.address = qrc20.contract_address AND ${logFilter}
-    `, {type: db.QueryTypes.SELECT})
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     let totalCount = result[0].totalCount || 0
     if (totalCount === 0) {
       return {totalCount: 0, transactions: []}
@@ -74,7 +75,7 @@ class ContractService extends Service {
       ) list ON list.id = receipt.transaction_id
       ORDER BY receipt.block_height ${order}, receipt.index_in_block ${order}
       LIMIT ${offset}, ${limit}
-    `, {type: db.QueryTypes.SELECT})).map(({id}) => id)
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({id}) => id)
 
     let list = await Receipt.findAll({
       where: {transactionId: {[$in]: ids}},
@@ -123,7 +124,8 @@ class ContractService extends Service {
           ]
         }
       ],
-      order: [['blockHeight', order], ['indexInBlock', order]]
+      order: [['blockHeight', order], ['indexInBlock', order]],
+      transaction: this.ctx.state.transaction
     })
 
     if (!reversed) {
@@ -142,7 +144,8 @@ class ContractService extends Service {
           as: 'contract',
           required: true,
           attributes: ['addressString']
-        }]
+        }],
+        transaction: this.ctx.state.transaction
       })
       for (let {balance, contract} of intialBalanceList) {
         let address = contract.addressString
@@ -176,7 +179,8 @@ class ContractService extends Service {
             required: true,
             attributes: ['addressString']
           }
-        ]
+        ],
+        transaction: this.ctx.state.transaction
       })
       for (let log of latestLogs) {
         let address = log.contract.addressString

@@ -23,7 +23,8 @@ class BlockService extends Service {
           as: 'miner',
           attributes: ['string']
         }]
-      }]
+      }],
+      transaction: this.ctx.state.transaction
     })
     if (!result) {
       return null
@@ -31,16 +32,19 @@ class BlockService extends Service {
     let [prevHeader, nextHeader, transactions, [reward]] = await Promise.all([
       Header.findOne({
         where: {height: result.height - 1},
-        attributes: ['timestamp']
+        attributes: ['timestamp'],
+        transaction: this.ctx.state.transaction
       }),
       Header.findOne({
         where: {height: result.height + 1},
-        attributes: ['hash']
+        attributes: ['hash'],
+        transaction: this.ctx.state.transaction
       }),
       Transaction.findAll({
         where: {blockHeight: result.height},
         attributes: ['id'],
-        order: [['indexInBlock', 'ASC']]
+        order: [['indexInBlock', 'ASC']],
+        transaction: this.ctx.state.transaction
       }),
       this.getBlockRewards(result.height)
     ])
@@ -83,14 +87,15 @@ class BlockService extends Service {
     } else {
       return null
     }
-    let block = await Header.findOne({where: filter})
+    let block = await Header.findOne({where: filter, transaction: this.ctx.state.transaction})
     if (!block) {
       return null
     }
     let transactionIds = (await Transaction.findAll({
       where: {blockHeight: block.height},
       attributes: ['id'],
-      order: [['indexInBlock', 'ASC']]
+      order: [['indexInBlock', 'ASC']],
+      transaction: this.ctx.state.transaction
     })).map(tx => tx.id)
     let transactions = await Promise.all(transactionIds.map(id => this.ctx.service.transaction.getRawTransaction(id)))
     return new RawBlock({
@@ -128,7 +133,8 @@ class BlockService extends Service {
           attributes: ['string']
         }]
       }],
-      order: [['height', 'ASC']]
+      order: [['height', 'ASC']],
+      transaction: this.ctx.state.transaction
     })
     if (blocks.length === 0) {
       return []
@@ -152,7 +158,8 @@ class BlockService extends Service {
         }]
       }],
       order: [['height', 'DESC']],
-      limit: count
+      limit: count,
+      transaction: this.ctx.state.transaction
     })
     if (blocks.length === 0) {
       return []
@@ -182,7 +189,7 @@ class BlockService extends Service {
       ) AS block_reward
       GROUP BY height
       ORDER BY height ASC
-    `, {type: this.ctx.model.QueryTypes.SELECT})
+    `, {type: this.ctx.model.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     let result = rewards.map(reward => BigInt(reward.value))
     if (startHeight[0] === 0) {
       result[0] = 0n
@@ -195,7 +202,8 @@ class BlockService extends Service {
     let [prevHeader, rewards] = await Promise.all([
       Header.findOne({
         where: {height: blocks[0].height - 1},
-        attributes: ['timestamp']
+        attributes: ['timestamp'],
+        transaction: this.ctx.state.transaction
       }),
       this.getBlockRewards(blocks[0].height, blocks[blocks.length - 1].height + 1)
     ])

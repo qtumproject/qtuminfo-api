@@ -6,6 +6,8 @@ exports.sequrity = {
   csrf: {enable: false}
 }
 
+exports.middleware = ['transaction']
+
 exports.sequelize = {
   Sequelize: require('sequelize'),
   dialect: 'mysql',

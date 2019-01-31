@@ -11,7 +11,8 @@ class BalanceService extends Service {
         addressId: {[$in]: ids},
         outputHeight: {[$gt]: 0},
         inputHeight: null
-      }
+      },
+      transaction: this.ctx.state.transaction
     })
     return BigInt(result || 0)
   }
@@ -31,7 +32,7 @@ class BalanceService extends Service {
           SUM(CAST(GREATEST(value, 0) AS DECIMAL(24))) AS totalReceived,
           SUM(CAST(GREATEST(-value, 0) AS DECIMAL(24))) AS totalSent
         FROM balance_change WHERE address_id = ${id} AND block_height > 0
-      `, {type: db.QueryTypes.SELECT})
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
       totalReceived = result.totalReceived == null ? 0n : BigInt(result.totalReceived)
       totalSent = result.totalSent == null ? 0n : BigInt(result.totalSent)
     } else {
@@ -44,7 +45,7 @@ class BalanceService extends Service {
           WHERE address_id IN (${ids.join(', ')}) AND block_height > 0
           GROUP BY transaction_id
         ) AS temp
-      `, {type: db.QueryTypes.SELECT})
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
       totalReceived = result.totalReceived == null ? 0n : BigInt(result.totalReceived)
       totalSent = result.totalSent == null ? 0n : BigInt(result.totalSent)
     }
@@ -59,7 +60,8 @@ class BalanceService extends Service {
         addressId: {[$in]: ids},
         outputHeight: 0xffffffff,
         inputHeight: null
-      }
+      },
+      transaction: this.ctx.state.transaction
     })
     return BigInt(result || 0)
   }
@@ -72,7 +74,8 @@ class BalanceService extends Service {
         addressId: {[$in]: ids},
         outputHeight: {[$gt]: this.app.blockchainInfo.tip.height - 500},
         isStake: true
-      }
+      },
+      transaction: this.ctx.state.transaction
     })
     return BigInt(result || 0)
   }
@@ -85,7 +88,8 @@ class BalanceService extends Service {
         addressId: {[$in]: ids},
         outputHeight: {[$between]: [1, this.app.blockchainInfo.tip.height - 500]},
         inputHeight: null
-      }
+      },
+      transaction: this.ctx.state.transaction
     })
     return BigInt(result || 0)
   }
@@ -107,7 +111,8 @@ class BalanceService extends Service {
         blockHeight: {[$gt]: 0}
       },
       distinct: true,
-      col: 'transactionId'
+      col: 'transactionId',
+      transaction: this.ctx.state.transaction
     })
     if (totalCount === 0) {
       return {totalCount: 0, transactions: []}
@@ -121,7 +126,8 @@ class BalanceService extends Service {
         attributes: ['transactionId'],
         order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]],
         limit,
-        offset
+        offset,
+        transaction: this.ctx.state.transaction
       })).map(({transactionId}) => transactionId)
       list = await BalanceChange.findAll({
         where: {
@@ -143,7 +149,8 @@ class BalanceService extends Service {
             attributes: ['id']
           }
         ],
-        order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]]
+        order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]],
+        transaction: this.ctx.state.transaction
       })
     } else {
       transactionIds = (await db.query(`
@@ -175,7 +182,8 @@ class BalanceService extends Service {
           }
         ],
         group: ['_id'],
-        order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]]
+        order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]],
+        transaction: this.ctx.state.transaction
       })
     }
 
@@ -189,7 +197,7 @@ class BalanceService extends Service {
         SELECT SUM(value) AS value FROM balance_change
         WHERE address_id IN (${ids.join(', ')})
           AND (block_height, index_in_block, transaction_id) < (${blockHeight}, ${indexInBlock}, ${transactionId})
-      `, {type: db.QueryTypes.SELECT})
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
       initialBalance = BigInt(value || 0n)
     }
     let transactions = list.map(item => ({
@@ -218,14 +226,14 @@ class BalanceService extends Service {
     let limit = pageSize
     let offset = pageIndex * pageSize
     let order = reversed ? 'DESC' : 'ASC'
-    let totalCount = await RichList.count()
+    let totalCount = await RichList.count({transaction: this.ctx.state.transaction})
     let list = await db.query(`
       SELECT address.string AS address, rich_list.balance AS balance FROM (
         SELECT address_id FROM rich_list ORDER BY balance ${order} LIMIT ${offset}, ${limit}
       ) list
       INNER JOIN rich_list ON rich_list.address_id = list.address_id
       INNER JOIN address ON address._id = list.address_id
-    `, {type: db.QueryTypes.SELECT})
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return {
       totalCount,
       list: list.map(item => ({
@@ -263,11 +271,18 @@ class BalanceService extends Service {
     }
     const {RichList} = this.ctx.model
     const {gt: $gt} = this.app.Sequelize.Op
-    let item = await RichList.findOne({where: {addressId: addressIds[0]}, attributes: ['balance']})
+    let item = await RichList.findOne({
+      where: {addressId: addressIds[0]},
+      attributes: ['balance'],
+      transaction: this.ctx.state.transaction
+    })
     if (item == null) {
       return null
     } else {
-      return await RichList.count({where: {balance: {[$gt]: item.balance.toString()}}}) + 1
+      return await RichList.count({
+        where: {balance: {[$gt]: item.balance.toString()}},
+        transaction: this.ctx.state.transaction
+      }) + 1
     }
   }
 }

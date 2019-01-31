@@ -53,7 +53,7 @@ class AddressService extends Service {
           AND receipt_log.topic1 = 0x${TransferABI.id.toString('hex')}
           AND (receipt_log.topic2 IN (${topicQuery}) OR receipt_log.topic3 IN (${topicQuery}))
       ) AS list
-    `, {type: db.QueryTypes.SELECT})
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return count
   }
 
@@ -78,7 +78,7 @@ class AddressService extends Service {
       ) AS list INNER JOIN transaction tx ON tx._id = list.id
       ORDER BY tx.block_height ${order}, tx.index_in_block ${order}, tx._id ${order}
       LIMIT ${offset}, ${limit}
-    `, {type: db.QueryTypes.SELECT})).map(({id}) => id)
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({id}) => id)
     return {totalCount, transactions}
   }
 
@@ -98,7 +98,8 @@ class AddressService extends Service {
         as: 'address',
         required: true,
         attributes: ['string']
-      }]
+      }],
+      transaction: this.ctx.state.transaction
     })
     return utxos.map(utxo => ({
       transactionId: utxo.outputTxId,
