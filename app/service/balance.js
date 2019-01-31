@@ -1,3 +1,5 @@
+const {promises: fs} = require('fs')
+const uuidv4 = require('uuid/v4')
 const {Service} = require('egg')
 
 class BalanceService extends Service {
@@ -237,19 +239,20 @@ class BalanceService extends Service {
 
   async updateRichList() {
     const db = this.ctx.model
-    const transaction = await db.transaction({
-      isolationLevel: this.app.Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
-    })
+    const transaction = await db.transaction()
     try {
+      let file = `/tmp/qtuminfo-richlist-${uuidv4()}`
       const blockHeight = this.app.blockchainInfo.tip.height
-      await db.query(`DELETE FROM rich_list`, {transaction})
       await db.query(`
-        INSERT INTO rich_list
-        SELECT address_id, SUM(value) AS value FROM transaction_output
+        SELECT address_id, SUM(value) AS value INTO OUTFILE '${file}'
+        FROM transaction_output
         WHERE address_id > 0 AND (input_height IS NULL OR input_height > ${blockHeight})
           AND (output_height BETWEEN 1 AND ${blockHeight}) AND value > 0
         GROUP BY address_id
       `, {transaction})
+      await db.query(`DELETE FROM rich_list`, {transaction})
+      await db.query(`LOAD DATA INFILE '${file}' INTO TABLE rich_list`, {transaction})
+      await fs.unlink(file)
       await transaction.commit()
     } catch (err) {
       await transaction.rollback()
