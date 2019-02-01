@@ -152,14 +152,14 @@ class BalanceService extends Service {
         transaction: this.ctx.state.transaction
       })
     } else {
-      transactionIds = (await db.query(`
-        SELECT _id FROM transaction WHERE EXISTS (
-          SELECT * FROM balance_change
-          WHERE balance_change.transaction_id = transaction._id AND address_id IN (${ids.join(', ')})
-        ) AND block_height > 0
-        ORDER BY block_height ${order}, index_in_block ${order}, _id ${order}
-        LIMIT ${offset}, ${limit}
-      `, {type: db.QueryTypes.SELECT})).map(({_id}) => _id)
+      transactionIds = (await BalanceChange.findAll({
+        where: {addressId: {[$in]: ids}},
+        attributes: ['transactionId'],
+        order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]],
+        limit,
+        offset,
+        transaction: this.ctx.state.transaction
+      })).map(({transactionId}) => transactionId)
       list = await BalanceChange.findAll({
         where: {
           transactionId: {[$in]: transactionIds},

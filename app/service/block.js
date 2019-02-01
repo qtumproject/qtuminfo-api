@@ -186,7 +186,7 @@ class BlockService extends Service {
           tx.block_height BETWEEN ${startHeight} AND ${endHeight - 1}
           AND ((tx.block_height <= 5000 AND tx.index_in_block = 0) OR (tx.block_height > 5000 AND tx.index_in_block = 1))
           AND tx.id = txo.input_transaction_id
-      ) AS block_reward
+      ) block_reward
       GROUP BY height
       ORDER BY height ASC
     `, {type: this.ctx.model.QueryTypes.SELECT, transaction: this.ctx.state.transaction})

@@ -52,7 +52,7 @@ class AddressService extends Service {
           AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
           AND receipt_log.topic1 = 0x${TransferABI.id.toString('hex')}
           AND (receipt_log.topic2 IN (${topicQuery}) OR receipt_log.topic3 IN (${topicQuery}))
-      ) AS list
+      ) list
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return count
   }
