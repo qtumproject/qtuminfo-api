@@ -66,17 +66,22 @@ class AddressService extends Service {
     let topicQuery = hexAddresses.map(address => `0x${'0'.repeat(24) + address.toString('hex')}`).join(', ') || 'NULL'
     let totalCount = await this.getAddressTransactionCount(addressIds, hexAddresses)
     let transactions = (await db.query(`
-      SELECT tx.id FROM (
-        SELECT transaction_id AS id FROM balance_change WHERE address_id IN (${addressQuery})
-        UNION
-        SELECT receipt.transaction_id AS id FROM receipt, receipt_log, contract
-        WHERE receipt._id = receipt_log.receipt_id
-          AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
-          AND receipt_log.topic1 = 0x${TransferABI.id.toString('hex')}
-          AND (receipt_log.topic2 IN (${topicQuery}) OR receipt_log.topic3 IN (${topicQuery}))
-      ) AS list INNER JOIN transaction tx ON tx._id = list.id
-      ORDER BY tx.block_height ${order}, tx.index_in_block ${order}, tx._id ${order}
-      LIMIT ${offset}, ${limit}
+      SELECT tx.id AS id FROM (
+        SELECT _id FROM (
+          SELECT block_height, index_in_block, transaction_id AS _id FROM balance_change
+          WHERE address_id IN (${addressQuery})
+          UNION
+          SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
+          FROM receipt, receipt_log, contract
+          WHERE receipt._id = receipt_log.receipt_id
+            AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
+            AND receipt_log.topic1 = 0x${TransferABI.id.toString('hex')}
+            AND (receipt_log.topic2 IN (${topicQuery}) OR receipt_log.topic3 IN (${topicQuery}))
+        ) list
+        ORDER BY block_height ${order}, index_in_block ${order}, _id ${order}
+        LIMIT ${offset}, ${limit}
+      ) list, transaction tx
+      WHERE tx._id = list._id
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({id}) => id)
     return {totalCount, transactions}
   }
