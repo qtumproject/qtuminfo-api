@@ -23,26 +23,26 @@ class BalanceService extends Service {
     }
 
     const db = this.ctx.model
+    const {sql} = this.ctx.helper
     let totalReceived
     let totalSent
     if (ids.length === 1) {
-      let id = ids[0]
-      let [result] = await db.query(`
+      let [result] = await db.query(sql`
         SELECT
           SUM(CAST(GREATEST(value, 0) AS DECIMAL(24))) AS totalReceived,
           SUM(CAST(GREATEST(-value, 0) AS DECIMAL(24))) AS totalSent
-        FROM balance_change WHERE address_id = ${id} AND block_height > 0
+        FROM balance_change WHERE address_id = ${ids[0]} AND block_height > 0
       `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
       totalReceived = result.totalReceived == null ? 0n : BigInt(result.totalReceived)
       totalSent = result.totalSent == null ? 0n : BigInt(result.totalSent)
     } else {
-      let [result] = await db.query(`
+      let [result] = await db.query(sql`
         SELECT
           SUM(CAST(GREATEST(value, 0) AS DECIMAL(24))) AS totalReceived,
           SUM(CAST(GREATEST(-value, 0) AS DECIMAL(24))) AS totalSent
         FROM (
           SELECT SUM(value) AS value FROM balance_change
-          WHERE address_id IN (${ids.join(', ')}) AND block_height > 0
+          WHERE address_id IN ${ids} AND block_height > 0
           GROUP BY transaction_id
         ) AS temp
       `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
@@ -99,6 +99,7 @@ class BalanceService extends Service {
       return []
     }
     const db = this.ctx.model
+    const {sql} = this.ctx.helper
     const {Header, Transaction, BalanceChange, fn, col} = db
     const {in: $in, gt: $gt} = this.app.Sequelize.Op
     let {limit, offset, reversed = true} = this.ctx.state.pagination
@@ -192,9 +193,9 @@ class BalanceService extends Service {
     let initialBalance = 0n
     if (list.length > 0) {
       let {blockHeight, indexInBlock, transactionId} = list[0]
-      let [{value}] = await db.query(`
+      let [{value}] = await db.query(sql`
         SELECT SUM(value) AS value FROM balance_change
-        WHERE address_id IN (${ids.join(', ')})
+        WHERE address_id IN ${ids}
           AND (block_height, index_in_block, transaction_id) < (${blockHeight}, ${indexInBlock}, ${transactionId})
       `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
       initialBalance = BigInt(value || 0n)
@@ -222,9 +223,10 @@ class BalanceService extends Service {
   async getRichList() {
     const db = this.ctx.model
     const {RichList} = db
+    const {sql} = this.ctx.helper
     let {limit, offset} = this.ctx.state.pagination
     let totalCount = await RichList.count({transaction: this.ctx.state.transaction})
-    let list = await db.query(`
+    let list = await db.query(sql`
       SELECT address.string AS address, rich_list.balance AS balance FROM (
         SELECT address_id FROM rich_list ORDER BY balance DESC LIMIT ${offset}, ${limit}
       ) list
@@ -242,19 +244,20 @@ class BalanceService extends Service {
 
   async updateRichList() {
     const db = this.ctx.model
-    const transaction = await db.transaction()
+    const {sql} = this.ctx.helper
+    let transaction = await db.transaction()
     try {
       let file = `/tmp/qtuminfo-richlist-${uuidv4()}`
       const blockHeight = this.app.blockchainInfo.tip.height
-      await db.query(`
-        SELECT address_id, SUM(value) AS value INTO OUTFILE '${file}'
+      await db.query(sql`
+        SELECT address_id, SUM(value) AS value INTO OUTFILE ${file}
         FROM transaction_output
         WHERE address_id > 0 AND (input_height IS NULL OR input_height > ${blockHeight})
           AND (output_height BETWEEN 1 AND ${blockHeight}) AND value > 0
         GROUP BY address_id
       `, {transaction})
-      await db.query(`DELETE FROM rich_list`, {transaction})
-      await db.query(`LOAD DATA INFILE '${file}' INTO TABLE rich_list`, {transaction})
+      await db.query(sql`DELETE FROM rich_list`, {transaction})
+      await db.query(sql`LOAD DATA INFILE ${file} INTO TABLE rich_list`, {transaction})
       await fs.unlink(file)
       await transaction.commit()
     } catch (err) {

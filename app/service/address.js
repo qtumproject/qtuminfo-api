@@ -41,17 +41,17 @@ class AddressService extends Service {
   async getAddressTransactionCount(addressIds, hexAddresses) {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
-    let addressQuery = addressIds.join(', ') || 'NULL'
-    let topicQuery = hexAddresses.map(address => `0x${'0'.repeat(24) + address.toString('hex')}`).join(', ') || 'NULL'
-    let [{count}] = await db.query(`
+    const {sql} = this.ctx.helper
+    let topics = hexAddresses.map(address => Buffer.concat([Buffer.alloc(12), address]))
+    let [{count}] = await db.query(sql`
       SELECT COUNT(*) AS count FROM (
-        SELECT transaction_id FROM balance_change WHERE address_id IN (${addressQuery})
+        SELECT transaction_id FROM balance_change WHERE address_id IN ${addressIds}
         UNION
         SELECT receipt.transaction_id AS transaction_id FROM receipt, receipt_log, contract
         WHERE receipt._id = receipt_log.receipt_id
           AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
-          AND receipt_log.topic1 = 0x${TransferABI.id.toString('hex')}
-          AND (receipt_log.topic2 IN (${topicQuery}) OR receipt_log.topic3 IN (${topicQuery}))
+          AND receipt_log.topic1 = ${TransferABI.id}
+          AND (receipt_log.topic2 IN ${topics} OR receipt_log.topic3 IN ${topics})
       ) list
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return count
@@ -60,23 +60,23 @@ class AddressService extends Service {
   async getAddressTransactions(addressIds, hexAddresses) {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
+    const {sql} = this.ctx.helper
     let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
-    let addressQuery = addressIds.join(', ') || 'NULL'
-    let topicQuery = hexAddresses.map(address => `0x${'0'.repeat(24) + address.toString('hex')}`).join(', ') || 'NULL'
+    let topics = hexAddresses.map(address => Buffer.concat([Buffer.alloc(12), address]))
     let totalCount = await this.getAddressTransactionCount(addressIds, hexAddresses)
-    let transactions = (await db.query(`
+    let transactions = (await db.query(sql`
       SELECT tx.id AS id FROM (
         SELECT _id FROM (
           SELECT block_height, index_in_block, transaction_id AS _id FROM balance_change
-          WHERE address_id IN (${addressQuery})
+          WHERE address_id IN ${addressIds}
           UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
           FROM receipt, receipt_log, contract
           WHERE receipt._id = receipt_log.receipt_id
             AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
-            AND receipt_log.topic1 = 0x${TransferABI.id.toString('hex')}
-            AND (receipt_log.topic2 IN (${topicQuery}) OR receipt_log.topic3 IN (${topicQuery}))
+            AND receipt_log.topic1 = ${TransferABI.id}
+            AND (receipt_log.topic2 IN ${topics} OR receipt_log.topic3 IN ${topics})
         ) list
         ORDER BY block_height ${order}, index_in_block ${order}, _id ${order}
         LIMIT ${offset}, ${limit}

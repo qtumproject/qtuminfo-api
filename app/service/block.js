@@ -169,7 +169,9 @@ class BlockService extends Service {
   }
 
   async getBlockRewards(startHeight, endHeight = startHeight + 1) {
-    let rewards = await this.ctx.model.query(`
+    const db = this.ctx.model
+    const {sql} = this.ctx.helper
+    let rewards = await db.query(sql`
       SELECT SUM(value) AS value FROM (
         SELECT tx.block_height AS height, utxo.value AS value FROM transaction tx, transaction_output utxo
         WHERE
@@ -189,7 +191,7 @@ class BlockService extends Service {
       ) block_reward
       GROUP BY height
       ORDER BY height ASC
-    `, {type: this.ctx.model.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     let result = rewards.map(reward => BigInt(reward.value))
     if (startHeight[0] === 0) {
       result[0] = 0n
@@ -233,6 +235,7 @@ class BlockService extends Service {
 
   async getBiggestMiners(lastNBlocks) {
     const db = this.ctx.model
+    const {sql2} = this.ctx.helper
     const {Block} = db
     const {gte: $gte} = this.app.Sequelize.Op
     let fromBlockHeight = lastNBlocks == null ? 5001 : Math.max(this.app.blockchainInfo.height - lastNBlocks + 1, 5001)
@@ -243,7 +246,7 @@ class BlockService extends Service {
       col: 'minerId',
       transaction: this.ctx.state.transaction
     })
-    let list = await db.query(`
+    let list = await db.query(sql2`
       SELECT address.string AS address, list.blocks AS blocks, rich_list.balance AS balance FROM (
         SELECT miner_id, COUNT(*) AS blocks FROM block
         WHERE height >= ${fromBlockHeight}

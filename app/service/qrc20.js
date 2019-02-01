@@ -42,22 +42,22 @@ class ContractService extends Service {
     }
     let addressSet = new Set(addresses.map(address => address.toString('hex')))
     let topicAddresses = addresses.map(address => Buffer.concat([Buffer.alloc(12), address]))
-    let hexAddresses = addresses.map(address => `0x${'0'.repeat(24)}${address.toString('hex')}`)
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
+    const {sql, sqlRaw} = this.ctx.helper
     const {Header, Transaction, Receipt, ReceiptLog, Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance, literal} = db
     const {ne: $ne, and: $and, or: $or, in: $in} = this.app.Sequelize.Op
     let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
     let logFilter = [
-      ...tokens ? [`receipt_log.address IN (${tokens.map(token => `0x${token.toString('hex')}`).join(', ')})`] : [],
-      `receipt_log.topic1 = 0x${TransferABI.id.toString('hex')}`,
+      ...tokens ? [sql`receipt_log.address IN ${tokens}`] : [],
+      sql`receipt_log.topic1 = ${TransferABI.id}`,
       'receipt_log.topic3 IS NOT NULL',
       'receipt_log.topic4 IS NULL',
-      `(receipt_log.topic2 IN (${hexAddresses.join(', ')}) OR receipt_log.topic3 IN (${hexAddresses.join(', ')}))`
+      sql`(receipt_log.topic2 IN ${topicAddresses} OR receipt_log.topic3 IN ${topicAddresses})`
     ].join(' AND ')
 
-    let result = await db.query(`
+    let result = await db.query(sqlRaw`
       SELECT COUNT(DISTINCT(receipt.transaction_id)) AS totalCount
       FROM receipt, receipt_log, qrc20
       WHERE receipt._id = receipt_log.receipt_id AND receipt_log.address = qrc20.contract_address AND ${logFilter}
@@ -66,7 +66,7 @@ class ContractService extends Service {
     if (totalCount === 0) {
       return {totalCount: 0, transactions: []}
     }
-    let ids = (await db.query(`
+    let ids = (await db.query(sqlRaw`
       SELECT transaction_id AS id FROM receipt
       INNER JOIN (
         SELECT DISTINCT(receipt.transaction_id) AS id FROM receipt, receipt_log, qrc20
