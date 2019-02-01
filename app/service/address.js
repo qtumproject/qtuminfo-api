@@ -3,7 +3,7 @@ const {Service} = require('egg')
 class AddressService extends Service {
   async getAddressSummary(addressIds, p2pkhAddressIds, hexAddresses) {
     const {Block} = this.ctx.model
-    const {balance: balanceService, contract: contractService} = this.ctx.service
+    const {balance: balanceService, qrc20: qrc20Service} = this.ctx.service
     const {in: $in, gt: $gt} = this.app.Sequelize.Op
     let [
       {totalReceived, totalSent},
@@ -19,7 +19,7 @@ class AddressService extends Service {
       balanceService.getUnconfirmedBalance(addressIds),
       balanceService.getStakingBalance(addressIds),
       balanceService.getMatureBalance(p2pkhAddressIds),
-      contractService.getAllQRC20Balances(hexAddresses),
+      qrc20Service.getAllQRC20Balances(hexAddresses),
       balanceService.getBalanceRanking(addressIds),
       Block.count({where: {minerId: {[$in]: p2pkhAddressIds}, height: {[$gt]: 0}}}),
       this.getAddressTransactionCount(addressIds, hexAddresses),

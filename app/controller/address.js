@@ -111,7 +111,7 @@ class AddressController extends Controller {
 
   async qrc20BalanceHistory() {
     let {ctx} = this
-    let {totalCount, transactions} = await ctx.service.contract.getQRC20BalanceHistory(ctx.state.address.hexAddresses, null)
+    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory(ctx.state.address.hexAddresses, null)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({
