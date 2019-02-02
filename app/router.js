@@ -1,6 +1,7 @@
 module.exports = app => {
   const {router, controller, middleware} = app
   const addressMiddleware = middleware.address()
+  const contractMiddleware = middleware.contract()
   const paginationMiddleware = middleware.pagination()
 
   router.get('/info', controller.info.index)
@@ -74,11 +75,21 @@ module.exports = app => {
   )
 
   router.get(
+    '/contract/:contract',
+    contractMiddleware,
+    controller.contract.summary
+  )
+  router.get(
+    '/contract/:contract/txs',
+    contractMiddleware, paginationMiddleware,
+    controller.contract.transactions
+  )
+
+  router.get(
     '/misc/rich-list',
     paginationMiddleware,
     controller.misc.richList
   )
-
   router.get(
     '/misc/biggest-miners',
     paginationMiddleware,

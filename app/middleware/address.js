@@ -21,7 +21,8 @@ module.exports = () => async function address(ctx, next) {
   }
   let result = await Address.findAll({
     where: {string: {[$in]: addresses}},
-    attributes: ['_id', 'type', 'data']
+    attributes: ['_id', 'type', 'data'],
+    transaction: ctx.state.transaction
   })
   ctx.state.address = {
     addressIds: result.map(address => address._id),
