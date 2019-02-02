@@ -17,7 +17,7 @@ module.exports = app => {
       primaryKey: true
     },
     scriptPubKey: {
-      type: BLOB,
+      type: BLOB('medium'),
       field: 'scriptpubkey',
       allowNull: true
     },
@@ -35,7 +35,7 @@ module.exports = app => {
       allowNull: true
     },
     scriptSig: {
-      type: BLOB,
+      type: BLOB('medium'),
       field: 'scriptsig',
       allowNull: true
     },
