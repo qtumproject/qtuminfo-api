@@ -78,7 +78,7 @@ class AddressService extends Service {
             AND receipt_log.topic1 = ${TransferABI.id}
             AND (receipt_log.topic2 IN ${topics} OR receipt_log.topic3 IN ${topics})
         ) list
-        ORDER BY block_height ${order}, index_in_block ${order}, _id ${order}
+        ORDER BY block_height ${{order}}, index_in_block ${{order}}, _id ${{order}}
         LIMIT ${offset}, ${limit}
       ) list, transaction tx
       WHERE tx._id = list._id
