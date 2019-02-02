@@ -495,8 +495,8 @@ class TransactionService extends Service {
               token: {
                 address,
                 addressHex: addressHex.toString('hex'),
-                name: qrc20.name.toString(),
-                symbol: qrc20.symbol.toString(),
+                name: qrc20.name,
+                symbol: qrc20.symbol,
                 decimals: qrc20.decimals
               },
               ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex} : {from},
@@ -528,8 +528,8 @@ class TransactionService extends Service {
               token: {
                 address,
                 addressHex: addressHex.toString('hex'),
-                name: qrc721.name.toString(),
-                symbol: qrc721.symbol.toString()
+                name: qrc721.name,
+                symbol: qrc721.symbol
               },
               ...from && 'string' in from ? {from: from.string, fromHex: from.hex} : {from},
               ...to && 'string' in to ? {to: to.string, toHex: to.hex} : {to},

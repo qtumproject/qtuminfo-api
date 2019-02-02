@@ -28,8 +28,8 @@ class ContractService extends Service {
       qrc20: {
         address: item.contract.addressString,
         addressHex: item.contractAddress,
-        name: item.name.toString(),
-        symbol: item.symbol.toString(),
+        name: item.name,
+        symbol: item.symbol,
         decimals: item.decimals
       },
       balance: item.contract.qrc20Balances.map(({balance}) => balance).reduce((x, y) => x + y)

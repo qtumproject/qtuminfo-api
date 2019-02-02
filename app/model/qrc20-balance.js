@@ -13,12 +13,13 @@ module.exports = app => {
     balance: {
       type: CHAR(32).BINARY,
       get() {
-        return BigInt(`0x${this.getDataValue('balance').toString('hex')}`)
+        let balance = this.getDataValue('balance')
+        return balance == null ? null : BigInt(`0x${balance.toString('hex')}`)
       },
-      set(value) {
-        return this.setDataValue(
+      set(balance) {
+        this.setDataValue(
           'balance',
-          Buffer.from(value.toString(16).padStart(64, '0'), 'hex')
+          Buffer.from(balance.toString(16).padStart(64, '0'), 'hex')
         )
       }
     }

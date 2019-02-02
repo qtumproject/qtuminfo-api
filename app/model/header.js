@@ -27,12 +27,13 @@ module.exports = app => {
     chainwork: {
       type: CHAR(32).BINARY,
       get() {
-        return BigInt(`0x${this.getDataValue('chainwork').toString('hex')}`)
+        let chainwork = this.getDataValue('chainwork')
+        return chainwork == null ? null : BigInt(`0x${chainwork.toString('hex')}`)
       },
-      set(value) {
-        return this.setDataValue(
+      set(chainwork) {
+        this.setDataValue(
           'chainwork',
-          Buffer.from(value.toString(16).padStart(64, '0'), 'hex')
+          Buffer.from(chainwork.toString(16).padStart(64, '0'), 'hex')
         )
       }
     }

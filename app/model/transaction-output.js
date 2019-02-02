@@ -54,7 +54,7 @@ module.exports = app => {
         return value == null ? null : BigInt(value)
       },
       set(value) {
-        return this.setDataValue('value', value.toString())
+        this.setDataValue('value', value.toString())
       }
     },
     addressId: BIGINT.UNSIGNED,

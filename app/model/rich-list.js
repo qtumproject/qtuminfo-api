@@ -13,7 +13,7 @@ module.exports = app => {
         return balance == null ? null : BigInt(balance)
       },
       set(balance) {
-        return this.setDataValue('balance', balance.toString())
+        this.setDataValue('balance', balance.toString())
       }
     }
   }, {freezeTableName: true, underscored: true, timestamps: false})

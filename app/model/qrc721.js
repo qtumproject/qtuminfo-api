@@ -6,17 +6,34 @@ module.exports = app => {
       type: CHAR(20).BINARY,
       primaryKey: true
     },
-    name: BLOB,
-    symbol: BLOB,
+    name: {
+      type: BLOB,
+      get() {
+        return this.getDataValue('name').toString()
+      },
+      set(name) {
+        this.setDataValue('name', Buffer.from(name))
+      }
+    },
+    symbol: {
+      type: BLOB,
+      get() {
+        return this.getDataValue('symbol').toString()
+      },
+      set(symbol) {
+        this.setDataValue('symbol', Buffer.from(symbol))
+      }
+    },
     totalSupply: {
       type: CHAR(32).BINARY,
       get() {
-        return BigInt(`0x${this.getDataValue('totalSupply').toString('hex')}`)
+        let totalSupply = this.getDataValue('totalSupply')
+        return totalSupply == null ? null : BigInt(`0x${totalSupply.toString('hex')}`)
       },
-      set(value) {
-        return this.setDataValue(
+      set(totalSupply) {
+        this.setDataValue(
           'totalSupply',
-          Buffer.from(value.toString(16).padStart(64, '0'), 'hex')
+          Buffer.from(totalSupply.toString(16).padStart(64, '0'), 'hex')
         )
       }
     }
