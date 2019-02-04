@@ -12,15 +12,13 @@ class AddressController extends Controller {
       unconfirmed: summary.unconfirmed.toString(),
       staking: summary.staking.toString(),
       mature: summary.mature.toString(),
-      qrc20Balances: summary.qrc20Balances.map(({qrc20, balance}) => ({
-        qrc20: {
-          address: qrc20.address,
-          addressHex: qrc20.addressHex.toString('hex'),
-          name: qrc20.name,
-          symbol: qrc20.symbol,
-          decimals: qrc20.decimals
-        },
-        balance: balance.toString()
+      qrc20Balances: summary.qrc20Balances.map(item => ({
+        address: item.address,
+        addressHex: item.addressHex.toString('hex'),
+        name: item.name,
+        symbol: item.symbol,
+        decimals: item.decimals,
+        balance: item.balance.toString()
       })),
       ranking: summary.ranking,
       transactionCount: summary.transactionCount,
@@ -123,16 +121,14 @@ class AddressController extends Controller {
             timestamp: tx.block.timestamp
           }
         } : {},
-        tokens: tx.tokens.map(({qrc20, amount, balance}) => ({
-          qrc20: {
-            address: qrc20.address,
-            addressHex: qrc20.addressHex.toString('hex'),
-            name: qrc20.name,
-            symbol: qrc20.symbol,
-            decimals: qrc20.decimals
-          },
-          amount: amount.toString(),
-          balance: balance.toString()
+        tokens: tx.tokens.map(item => ({
+          address: item.address,
+          addressHex: item.addressHex.toString('hex'),
+          name: item.name,
+          symbol: item.symbol,
+          decimals: item.decimals,
+          amount: item.amount.toString(),
+          balance: item.balance.toString()
         }))
       }))
     }

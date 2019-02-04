@@ -25,13 +25,11 @@ class ContractService extends Service {
       transaction: this.ctx.state.transaction
     })
     return list.map(item => ({
-      qrc20: {
-        address: item.contract.addressString,
-        addressHex: item.contractAddress,
-        name: item.name,
-        symbol: item.symbol,
-        decimals: item.decimals
-      },
+      address: item.contract.addressString,
+      addressHex: item.contractAddress,
+      name: item.name,
+      symbol: item.symbol,
+      decimals: item.decimals,
       balance: item.contract.qrc20Balances.map(({balance}) => balance).reduce((x, y) => x + y)
     })).filter(({balance}) => balance)
   }
@@ -215,26 +213,24 @@ class ContractService extends Service {
         if (addressSet.has(log.topic3.slice(12).toString('hex'))) {
           delta += amount
         }
-        let item = result.tokens.find(token => token.qrc20.address === address)
+        let item = result.tokens.find(token => token.address === address)
         if (item) {
           item.amount += delta
         } else {
           result.tokens.push({
-            qrc20: {
-              address,
-              addressHex: log.address,
-              name: log.qrc20.name.toString(),
-              symbol: log.qrc20.symbol.toString(),
-              decimals: log.qrc20.decimals
-            },
+            address,
+            addressHex: log.address,
+            name: log.qrc20.name.toString(),
+            symbol: log.qrc20.symbol.toString(),
+            decimals: log.qrc20.decimals,
             amount: delta
           })
         }
       }
       for (let token of result.tokens) {
-        let initial = initialBalanceMap.get(token.qrc20.address) || 0n
+        let initial = initialBalanceMap.get(token.address) || 0n
         token.balance = initial -= token.amount
-        initialBalanceMap.set(token.qrc20.address, initial)
+        initialBalanceMap.set(token.address, initial)
       }
       return result
     })

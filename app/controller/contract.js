@@ -35,15 +35,13 @@ class ContractController extends Controller {
       totalReceived: summary.totalReceived.toString(),
       totalSent: summary.totalSent.toString(),
       unconfirmed: summary.unconfirmed.toString(),
-      qrc20Balances: summary.qrc20Balances.map(({qrc20, balance}) => ({
-        qrc20: {
-          address: qrc20.address,
-          addressHex: qrc20.addressHex.toString('hex'),
-          name: qrc20.name,
-          symbol: qrc20.symbol,
-          decimals: qrc20.decimals
-        },
-        balance: balance.toString()
+      qrc20Balances: summary.qrc20Balances.map(item => ({
+        address: item.address,
+        addressHex: item.addressHex.toString('hex'),
+        name: item.name,
+        symbol: item.symbol,
+        decimals: item.decimals,
+        balance: item.balance.toString()
       })),
       transactionCount: summary.transactionCount
     }

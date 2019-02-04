@@ -103,6 +103,10 @@ class ContractService extends Service {
           AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
           AND receipt_log.topic1 = ${TransferABI.id}
           AND (receipt_log.topic2 = ${topic} OR receipt_log.topic3 = ${topic})
+          AND (
+            (contract.type = 'qrc20' AND receipt_log.topic3 IS NOT NULL AND receipt_log.topic4 IS NULL)
+            OR (contract.type = 'qrc721' AND receipt_log.topic4 IS NOT NULL)
+          )
       ) list
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return result[0].count || 0
@@ -133,6 +137,10 @@ class ContractService extends Service {
             AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
             AND receipt_log.topic1 = ${TransferABI.id}
             AND (receipt_log.topic2 = ${topic} OR receipt_log.topic3 = ${topic})
+            AND (
+              (contract.type = 'qrc20' AND receipt_log.topic3 IS NOT NULL AND receipt_log.topic4 IS NULL)
+              OR (contract.type = 'qrc721' AND receipt_log.topic4 IS NOT NULL)
+            )
         ) list
         ORDER BY block_height ${{order}}, index_in_block ${{order}}, _id ${{order}}
         LIMIT ${offset}, ${limit}

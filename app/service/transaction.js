@@ -515,11 +515,8 @@ class TransactionService extends Service {
     let result = []
     for (let output of outputs) {
       if (output.receipt) {
-        for (let {address, addressHex, topics, data, qrc721} of output.receipt.logs) {
-          if (
-            qrc721 && [3, 4].includes(topics.length) && Buffer.compare(topics[0], TransferABI.id) === 0
-            && (topics[3] || data.length === 32)
-          ) {
+        for (let {address, addressHex, topics, qrc721} of output.receipt.logs) {
+          if (qrc721 && topics.length === 4 && Buffer.compare(topics[0], TransferABI.id) === 0) {
             let [from, to] = await Promise.all([
               this.transformHexAddress(topics[1]),
               this.transformHexAddress(topics[2])
@@ -533,7 +530,7 @@ class TransactionService extends Service {
               },
               ...from && 'string' in from ? {from: from.string, fromHex: from.hex} : {from},
               ...to && 'string' in to ? {to: to.string, toHex: to.hex} : {to},
-              tokenId: topics[3] ? topics[3].toString('hex') : data.toString('hex')
+              tokenId: topics[3].toString('hex')
             })
           }
         }
