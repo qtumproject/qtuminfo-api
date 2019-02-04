@@ -84,6 +84,16 @@ module.exports = app => {
     contractMiddleware, paginationMiddleware,
     controller.contract.transactions
   )
+  router.get(
+    '/contract/:contract/balance-history',
+    contractMiddleware, paginationMiddleware,
+    controller.contract.balanceHistory
+  )
+  router.get(
+    '/contract/:contract/qrc20-balance-history',
+    contractMiddleware, paginationMiddleware,
+    controller.contract.qrc20BalanceHistory
+  )
 
   router.get(
     '/misc/rich-list',

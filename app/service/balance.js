@@ -94,35 +94,37 @@ class BalanceService extends Service {
     return BigInt(result || 0)
   }
 
-  async getBalanceHistory(ids) {
+  async getBalanceHistory(ids, {nonZero = false} = {}) {
     if (ids.length === 0) {
       return []
     }
     const db = this.ctx.model
     const {sql} = this.ctx.helper
-    const {Header, Transaction, BalanceChange, fn, col} = db
-    const {in: $in, gt: $gt} = this.app.Sequelize.Op
+    const {Header, Transaction, BalanceChange} = db
+    const {in: $in, ne: $ne, gt: $gt} = this.app.Sequelize.Op
     let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
 
-    let totalCount = await BalanceChange.count({
-      where: {
-        addressId: {[$in]: ids},
-        blockHeight: {[$gt]: 0}
-      },
-      distinct: true,
-      col: 'transactionId',
-      transaction: this.ctx.state.transaction
-    })
-    if (totalCount === 0) {
-      return {totalCount: 0, transactions: []}
-    }
-
+    let totalCount
     let transactionIds
     let list
     if (ids.length === 1) {
+      let valueFilter = nonZero ? {value: {[$ne]: 0}} : {}
+      totalCount = await BalanceChange.count({
+        where: {
+          addressId: ids[0],
+          blockHeight: {[$gt]: 0},
+          ...valueFilter
+        },
+        distinct: true,
+        col: 'transactionId',
+        transaction: this.ctx.state.transaction
+      })
+      if (totalCount === 0) {
+        return {totalCount: 0, transactions: []}
+      }
       transactionIds = (await BalanceChange.findAll({
-        where: {addressId: ids[0]},
+        where: {addressId: ids[0], ...valueFilter},
         attributes: ['transactionId'],
         order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]],
         limit,
@@ -130,10 +132,7 @@ class BalanceService extends Service {
         transaction: this.ctx.state.transaction
       })).map(({transactionId}) => transactionId)
       list = await BalanceChange.findAll({
-        where: {
-          transactionId: {[$in]: transactionIds},
-          addressId: ids[0]
-        },
+        where: {transactionId: {[$in]: transactionIds}, addressId: ids[0]},
         attributes: ['transactionId', 'blockHeight', 'indexInBlock', 'value'],
         include: [
           {
@@ -153,38 +152,63 @@ class BalanceService extends Service {
         transaction: this.ctx.state.transaction
       })
     } else {
-      transactionIds = (await BalanceChange.findAll({
-        where: {addressId: {[$in]: ids}},
-        attributes: ['transactionId'],
-        order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]],
-        limit,
-        offset,
-        transaction: this.ctx.state.transaction
-      })).map(({transactionId}) => transactionId)
-      list = await BalanceChange.findAll({
-        where: {
-          transactionId: {[$in]: transactionIds},
-          addressId: {[$in]: ids}
-        },
-        attributes: ['transactionId', 'blockHeight', 'indexInBlock', [fn('SUM', col('value')), 'value']],
-        include: [
-          {
-            model: Header,
-            as: 'header',
-            required: false,
-            attributes: ['hash', 'timestamp']
-          },
-          {
-            model: Transaction,
-            as: 'transaction',
-            required: true,
-            attributes: ['id']
-          }
-        ],
-        group: ['_id'],
-        order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]],
-        transaction: this.ctx.state.transaction
-      })
+      let havingFilter = nonZero ? 'SUM(value) != 0' : null
+      if (havingFilter) {
+        let result = await db.query(sql`
+          SELECT COUNT(*) AS count FROM (
+            SELECT transaction_id FROM balance_change
+            WHERE address_id IN ${ids} AND block_height > 0
+            GROUP BY transaction_id
+            HAVING ${{raw: havingFilter}}
+          ) list
+        `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+        totalCount = result[0].count || 0
+      } else {
+        totalCount = await BalanceChange.count({
+          where: {addressId: {[$in]: ids}, blockHeight: {[$gt]: 0}},
+          distinct: true,
+          col: 'transactionId',
+          transaction: this.ctx.state.transaction
+        })
+      }
+      if (totalCount === 0) {
+        return {totalCount: 0, transactions: []}
+      }
+      if (havingFilter) {
+        transactionIds = (await db.query(sql`
+          SELECT transaction_id AS transactionId FROM balance_change
+          WHERE address_id IN ${ids} AND block_height > 0
+          GROUP BY transaction_id
+          HAVING ${{raw: havingFilter}}
+          ORDER BY MIN(block_height) ${{raw: order}}, MIN(index_in_block) ${{raw: order}}, transaction_id ${{raw: order}}
+          LIMIT ${offset}, ${limit}
+        `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({transactionId}) => transactionId)
+      } else {
+        transactionIds = (await BalanceChange.findAll({
+          where: {addressId: {[$in]: ids}},
+          attributes: ['transactionId'],
+          order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order]],
+          limit,
+          offset,
+          transaction: this.ctx.state.transaction
+        })).map(({transactionId}) => transactionId)
+      }
+      list = await db.query(sql`
+        SELECT
+          transaction.id AS id, transaction.block_height AS blockHeight,
+          transaction.index_in_block AS indexInBlock, transaction._id AS _id,
+          header.hash AS blockHash, header.timestamp AS timestamp,
+          list.value AS value
+        FROM (
+          SELECT transaction_id, SUM(value) AS value
+          FROM balance_change
+          WHERE transaction_id IN ${transactionIds} AND address_id IN ${ids}
+          GROUP BY transaction_id
+          ORDER BY MIN(block_height) ${{raw: order}}, MIN(index_in_block) ${{raw: order}}, transaction_id ${{raw: order}}
+        ) list
+        INNER JOIN transaction ON transaction._id = list.transaction_id
+        LEFT JOIN header ON header.height = transaction.block_height
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     }
 
     if (reversed) {
@@ -192,16 +216,16 @@ class BalanceService extends Service {
     }
     let initialBalance = 0n
     if (list.length > 0) {
-      let {blockHeight, indexInBlock, transactionId} = list[0]
+      let {blockHeight, indexInBlock, _id} = list[0]
       let [{value}] = await db.query(sql`
         SELECT SUM(value) AS value FROM balance_change
         WHERE address_id IN ${ids}
-          AND (block_height, index_in_block, transaction_id) < (${blockHeight}, ${indexInBlock}, ${transactionId})
+          AND (block_height, index_in_block, transaction_id) < (${blockHeight}, ${indexInBlock}, ${_id})
       `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
       initialBalance = BigInt(value || 0n)
     }
     let transactions = list.map(item => ({
-      id: item.transaction.id,
+      id: item.id || item.transaction.id,
       ...item.header ? {
         block: {
           hash: item.header.hash,
@@ -209,7 +233,14 @@ class BalanceService extends Service {
           timestamp: item.header.timestamp
         }
       } : {},
-      amount: BigInt(item.getDataValue('value')),
+      ...item.blockHash ? {
+        block: {
+          hash: item.blockHash,
+          height: item.blockHeight,
+          timestamp: item.timestamp
+        }
+      } : {},
+      amount: BigInt(item.value),
     }))
     for (let tx of transactions) {
       tx.balance = initialBalance += tx.amount

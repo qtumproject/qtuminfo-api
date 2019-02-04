@@ -16,8 +16,8 @@ function transformSQLArg(arg) {
       return `(${arg.map(x => `0x${x.toString('hex')}`).join(', ')})`
     }
     return `(${arg.join(', ')})`
-  } else if ('order' in arg) {
-    return arg.order
+  } else if (arg && 'raw' in arg) {
+    return arg.raw
   }
   return arg.toString()
 }

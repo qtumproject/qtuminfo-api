@@ -142,7 +142,7 @@ class ContractService extends Service {
               OR (contract.type = 'qrc721' AND receipt_log.topic4 IS NOT NULL)
             )
         ) list
-        ORDER BY block_height ${{order}}, index_in_block ${{order}}, _id ${{order}}
+        ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, _id ${{raw: order}}
         LIMIT ${offset}, ${limit}
       ) list, transaction tx
       WHERE tx._id = list._id
