@@ -196,7 +196,7 @@ class BalanceService extends Service {
       list = await db.query(sql`
         SELECT
           transaction.id AS id, transaction.block_height AS blockHeight,
-          transaction.index_in_block AS indexInBlock, transaction._id AS _id,
+          transaction.index_in_block AS indexInBlock, transaction._id AS transactionId,
           header.hash AS blockHash, header.timestamp AS timestamp,
           list.value AS value
         FROM (
@@ -216,11 +216,11 @@ class BalanceService extends Service {
     }
     let initialBalance = 0n
     if (list.length > 0) {
-      let {blockHeight, indexInBlock, _id} = list[0]
+      let {blockHeight, indexInBlock, transactionId} = list[0]
       let [{value}] = await db.query(sql`
         SELECT SUM(value) AS value FROM balance_change
         WHERE address_id IN ${ids}
-          AND (block_height, index_in_block, transaction_id) < (${blockHeight}, ${indexInBlock}, ${_id})
+          AND (block_height, index_in_block, transaction_id) < (${blockHeight}, ${indexInBlock}, ${transactionId})
       `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
       initialBalance = BigInt(value || 0n)
     }
