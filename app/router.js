@@ -94,6 +94,11 @@ module.exports = app => {
     contractMiddleware, paginationMiddleware,
     controller.contract.qrc20BalanceHistory
   )
+  router.get(
+    '/qrc20-tokens',
+    paginationMiddleware,
+    controller.qrc20.list
+  )
 
   router.get(
     '/misc/rich-list',

@@ -1,6 +1,50 @@
 const {Service} = require('egg')
 
 class ContractService extends Service {
+  async listQRC20Tokens() {
+    const db = this.ctx.model
+    const {Qrc20Balance: QRC20Balance} = db
+    const {ne: $ne} = this.app.Sequelize.Op
+    const {sql} = this.ctx.helper
+    let {limit, offset} = this.ctx.state.pagination
+
+    let totalCount = await QRC20Balance.count({
+      where: {balance: {[$ne]: Buffer.alloc(32)}},
+      distinct: true,
+      col: 'contractAddress',
+      transaction: this.ctx.state.transaction
+    })
+    let list = await db.query(sql`
+      SELECT
+        contract.address_string AS address, contract.address AS addressHex,
+        qrc20.name AS name, qrc20.symbol AS symbol, qrc20.decimals AS decimals, qrc20.total_supply AS totalSupply,
+        qrc20.version AS version,
+        list.holders AS holders
+      FROM (
+        SELECT contract_address, COUNT(*) AS holders FROM qrc20_balance
+        WHERE balance != ${Buffer.alloc(32)}
+        GROUP BY contract_address
+        ORDER BY holders DESC
+        LIMIT ${offset}, ${limit}
+      ) list
+      INNER JOIN qrc20 ON qrc20.contract_address = list.contract_address
+      INNER JOIN contract ON contract.address = list.contract_address
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    return {
+      totalCount,
+      tokens: list.map(item => ({
+        address: item.address,
+        addressHex: item.addressHex,
+        name: item.name.toString(),
+        symbol: item.symbol.toString(),
+        decimals: item.decimals,
+        totalSupply: BigInt(`0x${item.totalSupply.toString('hex')}`),
+        version: item.version && item.version.toString(),
+        holders: item.holders
+      }))
+    }
+  }
+
   async getAllQRC20Balances(hexAddresses) {
     if (hexAddresses.length === 0) {
       return []

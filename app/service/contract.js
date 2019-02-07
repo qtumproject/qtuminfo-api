@@ -34,6 +34,7 @@ class ContractService extends Service {
       contract.qrc20.holders = await QRC20Balance.count({
         where: {
           contractAddress,
+          address: {[$ne]: Buffer.alloc(20)},
           balance: {[$ne]: Buffer.alloc(32)}
         },
         transaction: this.ctx.state.transaction
