@@ -20,6 +20,7 @@ class ContractService extends Service {
         list.holders AS holders
       FROM (
         SELECT contract_address, COUNT(*) AS holders FROM qrc20_balance
+        INNER JOIN qrc20 USING (contract_address)
         WHERE balance != ${Buffer.alloc(32)}
         GROUP BY contract_address
         ORDER BY holders DESC
