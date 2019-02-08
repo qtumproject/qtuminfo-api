@@ -1,6 +1,11 @@
 const {Controller} = require('egg')
 
 class MiscController extends Controller {
+  async classify() {
+    let {ctx} = this
+    ctx.body = await ctx.service.misc.classify(ctx.params.id)
+  }
+
   async richList() {
     let {ctx} = this
     let {totalCount, list} = await ctx.service.balance.getRichList()

@@ -105,6 +105,7 @@ module.exports = app => {
     controller.qrc20.richList
   )
 
+  router.get(`/search/:id`, controller.misc.classify)
   router.get(
     '/misc/rich-list',
     paginationMiddleware,
