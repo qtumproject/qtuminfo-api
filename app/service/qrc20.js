@@ -3,17 +3,15 @@ const {Service} = require('egg')
 class ContractService extends Service {
   async listQRC20Tokens() {
     const db = this.ctx.model
-    const {Qrc20Balance: QRC20Balance} = db
-    const {ne: $ne} = this.app.Sequelize.Op
     const {sql} = this.ctx.helper
     let {limit, offset} = this.ctx.state.pagination
 
-    let totalCount = await QRC20Balance.count({
-      where: {balance: {[$ne]: Buffer.alloc(32)}},
-      distinct: true,
-      col: 'contractAddress',
-      transaction: this.ctx.state.transaction
-    })
+    let result = await db.query(sql`
+      SELECT COUNT(DISTINCT(qrc20_balance.contract_address)) AS count FROM qrc20_balance
+      INNER JOIN qrc20 ON qrc20.contract_address = qrc20_balance.contract_address
+      WHERE balance != ${Buffer.alloc(32)}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    let totalCount = result[0].count || 0
     let list = await db.query(sql`
       SELECT
         contract.address_string AS address, contract.address AS addressHex,
