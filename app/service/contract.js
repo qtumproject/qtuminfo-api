@@ -150,6 +150,28 @@ class ContractService extends Service {
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction}).map(({id}) => id)
     return {totalCount, transactions}
   }
+
+  async transformHexAddress(address) {
+    if (Buffer.compare(address, Buffer.alloc(20)) === 0) {
+      return null
+    }
+    const {Contract} = this.ctx.model
+    const {Address} = this.app.qtuminfo.lib
+    let contract = await Contract.findOne({
+      where: {address},
+      attributes: ['addressString'],
+      transaction: this.ctx.state.transaction
+    })
+    if (contract) {
+      return {string: contract.addressString, hex: address.toString('hex')}
+    } else {
+      return new Address({
+        type: Address.PAY_TO_PUBLIC_KEY_HASH,
+        data: address,
+        chain: this.app.chain
+      }).toString()
+    }
+  }
 }
 
 module.exports = ContractService

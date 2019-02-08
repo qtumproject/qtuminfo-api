@@ -488,8 +488,8 @@ class TransactionService extends Service {
         for (let {address, addressHex, topics, data, qrc20} of output.receipt.logs) {
           if (qrc20 && topics.length === 3 && Buffer.compare(topics[0], TransferABI.id) === 0 && data.length === 32) {
             let [from, to] = await Promise.all([
-              this.transformHexAddress(topics[1]),
-              this.transformHexAddress(topics[2])
+              this.ctx.service.contract.transformHexAddress(topics[1].slice(12)),
+              this.ctx.service.contract.transformHexAddress(topics[2].slice(12))
             ])
             result.push({
               token: {
@@ -518,8 +518,8 @@ class TransactionService extends Service {
         for (let {address, addressHex, topics, qrc721} of output.receipt.logs) {
           if (qrc721 && topics.length === 4 && Buffer.compare(topics[0], TransferABI.id) === 0) {
             let [from, to] = await Promise.all([
-              this.transformHexAddress(topics[1]),
-              this.transformHexAddress(topics[2])
+              this.ctx.service.contract.transformHexAddress(topics[1].slice(12)),
+              this.ctx.service.contract.transformHexAddress(topics[2].slice(12))
             ])
             result.push({
               token: {
@@ -528,8 +528,8 @@ class TransactionService extends Service {
                 name: qrc721.name,
                 symbol: qrc721.symbol
               },
-              ...from && 'string' in from ? {from: from.string, fromHex: from.hex} : {from},
-              ...to && 'string' in to ? {to: to.string, toHex: to.hex} : {to},
+              ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex} : {from},
+              ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex} : {to},
               tokenId: topics[3].toString('hex')
             })
           }
@@ -546,29 +546,6 @@ class TransactionService extends Service {
   isCoinstake(transaction) {
     return transaction.inputs.length > 0 && Buffer.compare(transaction.inputs[0].prevTxId, Buffer.alloc(32)) !== 0
       && transaction.outputs.length >= 2 && transaction.outputs[0].value === 0n && transaction.outputs[0].scriptPubKey.length === 0
-  }
-
-  async transformHexAddress(buffer) {
-    if (Buffer.compare(buffer, Buffer.alloc(32)) === 0) {
-      return null
-    }
-    let address = buffer.slice(12)
-    const {Contract} = this.ctx.model
-    const {Address} = this.app.qtuminfo.lib
-    let contract = await Contract.findOne({
-      where: {address},
-      attributes: ['addressString'],
-      transaction: this.ctx.state.transaction
-    })
-    if (contract) {
-      return {string: contract.addressString, hex: address.toString('hex')}
-    } else {
-      return new Address({
-        type: Address.PAY_TO_PUBLIC_KEY_HASH,
-        data: address,
-        chain: this.app.chain
-      }).toString()
-    }
   }
 
   transformTopics(log) {
