@@ -8,7 +8,7 @@ class ContractService extends Service {
 
     let result = await db.query(sql`
       SELECT COUNT(DISTINCT(qrc20_balance.contract_address)) AS count FROM qrc20_balance
-      INNER JOIN qrc20 ON qrc20.contract_address = qrc20_balance.contract_address
+      INNER JOIN qrc20 USING (contract_address)
       WHERE balance != ${Buffer.alloc(32)}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     let totalCount = result[0].count || 0
@@ -25,7 +25,7 @@ class ContractService extends Service {
         ORDER BY holders DESC
         LIMIT ${offset}, ${limit}
       ) list
-      INNER JOIN qrc20 ON qrc20.contract_address = list.contract_address
+      INNER JOIN qrc20 USING (contract_address)
       INNER JOIN contract ON contract.address = list.contract_address
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
 

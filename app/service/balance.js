@@ -261,7 +261,7 @@ class BalanceService extends Service {
       SELECT address.string AS address, rich_list.balance AS balance FROM (
         SELECT address_id FROM rich_list ORDER BY balance DESC LIMIT ${offset}, ${limit}
       ) list
-      INNER JOIN rich_list ON rich_list.address_id = list.address_id
+      INNER JOIN rich_list USING (address_id)
       INNER JOIN address ON address._id = list.address_id
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return {
