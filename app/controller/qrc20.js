@@ -18,6 +18,19 @@ class QRC20Controller extends Controller {
       }))
     }
   }
+
+  async richList() {
+    const {ctx} = this
+    let {totalCount, list} = await ctx.service.qrc20.getQRC20TokenRichList(ctx.state.contract.contractAddress)
+    ctx.body = {
+      totalCount,
+      list: list.map(item => ({
+        address: item.address,
+        addressHex: item.addressHex,
+        balance: item.balance.toString()
+      }))
+    }
+  }
 }
 
 module.exports = QRC20Controller

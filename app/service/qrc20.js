@@ -30,6 +30,7 @@ class ContractService extends Service {
       INNER JOIN qrc20 ON qrc20.contract_address = list.contract_address
       INNER JOIN contract ON contract.address = list.contract_address
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+
     return {
       totalCount,
       tokens: list.map(item => ({
@@ -282,6 +283,36 @@ class ContractService extends Service {
       transactions = transactions.reverse()
     }
     return {totalCount, transactions}
+  }
+
+  async getQRC20TokenRichList(contractAddress) {
+    const db = this.ctx.model
+    const {Qrc20Balance: QRC20Balance} = db
+    const {ne: $ne} = this.app.Sequelize.Op
+    let {limit, offset} = this.ctx.state.pagination
+
+    let totalCount = await QRC20Balance.count({
+      where: {contractAddress, balance: {[$ne]: Buffer.alloc(32)}},
+      transaction: this.ctx.state.transaction
+    })
+    let list = await QRC20Balance.findAll({
+      where: {contractAddress, balance: {[$ne]: Buffer.alloc(32)}},
+      attributes: ['address', 'balance'],
+      order: [['balance', 'DESC']],
+      limit,
+      offset,
+      transaction: this.ctx.state.transaction
+    })
+    list = await Promise.all(list.map(async ({address, balance}) => {
+      let x = await this.ctx.service.contract.transformHexAddress(address)
+      if (x && typeof x === 'object') {
+        return {address: x.string, addressHex: x.hex, balance}
+      } else {
+        return {address: x, balance}
+      }
+    }))
+
+    return {totalCount, list}
   }
 }
 
