@@ -151,26 +151,36 @@ class ContractService extends Service {
     return {totalCount, transactions}
   }
 
-  async transformHexAddress(address) {
-    if (Buffer.compare(address, Buffer.alloc(20)) === 0) {
-      return null
+  async transformHexAddresses(addresses) {
+    if (addresses.length === 0) {
+      return []
     }
     const {Contract} = this.ctx.model
+    const {in: $in} = this.app.Sequelize.Op
     const {Address} = this.app.qtuminfo.lib
-    let contract = await Contract.findOne({
-      where: {address},
-      attributes: ['addressString'],
+    let result = addresses.map(address => Buffer.compare(address, Buffer.alloc(20)) === 0 ? null : address)
+
+    let contracts = await Contract.findAll({
+      where: {address: {[$in]: addresses.filter(address => Buffer.compare(address, Buffer.alloc(20)) !== 0)}},
+      attributes: ['address', 'addressString'],
       transaction: this.ctx.state.transaction
     })
-    if (contract) {
-      return {string: contract.addressString, hex: address.toString('hex')}
-    } else {
-      return new Address({
-        type: Address.PAY_TO_PUBLIC_KEY_HASH,
-        data: address,
-        chain: this.app.chain
-      }).toString()
+    let mapping = new Map(contracts.map(({address, addressString}) => [address.toString('hex'), addressString]))
+    for (let i = 0; i < result.length; ++i) {
+      if (result[i]) {
+        let string = mapping.get(result[i].toString('hex'))
+        if (string) {
+          result[i] = {string, hex: result[i]}
+        } else {
+          result[i] = new Address({
+            type: Address.PAY_TO_PUBLIC_KEY_HASH,
+            data: result[i],
+            chain: this.app.chain
+          }).toString()
+        }
+      }
     }
+    return result
   }
 }
 

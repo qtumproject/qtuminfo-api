@@ -98,7 +98,7 @@ class TransactionService extends Service {
           model: Receipt,
           as: 'receipt',
           on: {
-            transactionId: where(col('receipt.transaction_id'), '=', col('transaction_output.output_transaction_id')),
+            transactionId: where(col('receipt.transaction_id'), '=', transaction._id),
             outputIndex: where(col('receipt.output_index'), '=', col('transaction_output.output_index'))
           },
           required: false,
@@ -487,10 +487,7 @@ class TransactionService extends Service {
       if (output.receipt) {
         for (let {address, addressHex, topics, data, qrc20} of output.receipt.logs) {
           if (qrc20 && topics.length === 3 && Buffer.compare(topics[0], TransferABI.id) === 0 && data.length === 32) {
-            let [from, to] = await Promise.all([
-              this.ctx.service.contract.transformHexAddress(topics[1].slice(12)),
-              this.ctx.service.contract.transformHexAddress(topics[2].slice(12))
-            ])
+            let [from, to] = await this.ctx.service.contract.transformHexAddresses([topics[1].slice(12), topics[2].slice(12)])
             result.push({
               token: {
                 address,
@@ -499,8 +496,8 @@ class TransactionService extends Service {
                 symbol: qrc20.symbol,
                 decimals: qrc20.decimals
               },
-              ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex} : {from},
-              ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex} : {to},
+              ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex.toString('hex')} : {from},
+              ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex.toString('hex')} : {to},
               value: BigInt(`0x${data.toString('hex')}`).toString()
             })
           }
@@ -517,10 +514,7 @@ class TransactionService extends Service {
       if (output.receipt) {
         for (let {address, addressHex, topics, qrc721} of output.receipt.logs) {
           if (qrc721 && topics.length === 4 && Buffer.compare(topics[0], TransferABI.id) === 0) {
-            let [from, to] = await Promise.all([
-              this.ctx.service.contract.transformHexAddress(topics[1].slice(12)),
-              this.ctx.service.contract.transformHexAddress(topics[2].slice(12))
-            ])
+            let [from, to] = await this.ctx.service.contract.transformHexAddresses([topics[1].slice(12), topics[2].slice(12)])
             result.push({
               token: {
                 address,
@@ -528,8 +522,8 @@ class TransactionService extends Service {
                 name: qrc721.name,
                 symbol: qrc721.symbol
               },
-              ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex} : {from},
-              ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex} : {to},
+              ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex.toString('hex')} : {from},
+              ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex.toString('hex')} : {to},
               tokenId: topics[3].toString('hex')
             })
           }

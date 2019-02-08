@@ -303,16 +303,20 @@ class ContractService extends Service {
       offset,
       transaction: this.ctx.state.transaction
     })
-    list = await Promise.all(list.map(async ({address, balance}) => {
-      let x = await this.ctx.service.contract.transformHexAddress(address)
-      if (x && typeof x === 'object') {
-        return {address: x.string, addressHex: x.hex, balance}
-      } else {
-        return {address: x, balance}
-      }
-    }))
-
-    return {totalCount, list}
+    let addresses = await this.ctx.service.contract.transformHexAddresses(list.map(item => item.address))
+    return {
+      totalCount,
+      list: list.map(({balance}, index) => {
+        let address = addresses[index]
+        return {
+          ...address && typeof address === 'object' ? {
+            address: address.string,
+            addressHex: address.hex.toString('hex')
+          } : {address},
+          balance
+        }
+      })
+    }
   }
 }
 
