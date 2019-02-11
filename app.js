@@ -22,6 +22,12 @@ module.exports = app => {
 
   app.messenger.on('update-richlist', async () => {
     let ctx = app.createAnonymousContext()
-    ctx.service.balance.updateRichList()
+    await ctx.service.balance.updateRichList()
+  })
+
+  app.messenger.on('get-stakeweight', async () => {
+    let ctx = app.createAnonymousContext()
+    let stakeWeight = await ctx.service.info.getStakeWeight()
+    app.messenger.sendToAgent('stakeweight', stakeWeight)
   })
 }

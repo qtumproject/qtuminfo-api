@@ -7,7 +7,7 @@ class InfoService extends Service {
       height: info.tip.height,
       supply: this.getTotalSupply(info.tip.height),
       circulatingSupply: this.getCirculatingSupply(info.tip.height),
-      netStakeWeight: info.stakeWeight,
+      netStakeWeight: Math.round(info.stakeWeight),
       feeRate: info.feeRate
     }
   }
@@ -37,6 +37,23 @@ class InfoService extends Service {
     } else {
       return totalSupply
     }
+  }
+
+  async getStakeWeight() {
+    const {Header} = this.ctx.model
+    const {gte: $gte} = this.app.Sequelize.Op
+    let height = await Header.aggregate('height', 'max', {transaction: this.ctx.state.transaction})
+    let list = await Header.findAll({
+      where: {height: {[$gte]: height - 72}},
+      attributes: ['timestamp', 'bits'],
+      order: [['height', 'ASC']],
+      transaction: this.ctx.state.transaction
+    })
+    let interval = list[list.length - 1].timestamp - list[0].timestamp
+    let sum = list.slice(1)
+      .map(x => x.difficulty)
+      .reduce((x, y) => x + y)
+    return sum * 2 ** 32 * 16 / interval
   }
 }
 

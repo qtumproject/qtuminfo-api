@@ -14,6 +14,7 @@ module.exports = function(agent) {
     io.on('block', block => {
       tip = block
       agent.messenger.sendToApp('new-block', block)
+      agent.messenger.sendRandom('get-stakeweight')
     })
     io.on('reorg', block => {
       tip = block
@@ -26,23 +27,12 @@ module.exports = function(agent) {
     })
   })
 
-  function fetchStakeWeight() {
-    let client = new agent.qtuminfo.rpc(agent.config.qtuminfo.rpc)
-    client.getstakinginfo().then(info => {
-      stakeWeight = info.netstakeweight
-    }, () => {})
-  }
-  fetchStakeWeight()
-  setInterval(fetchStakeWeight, 60 * 1000).unref()
-
   function fetchFeeRate() {
     let client = new agent.qtuminfo.rpc(agent.config.qtuminfo.rpc)
     client.estimatesmartfee(10).then(info => {
       feeRate = info.feerate
     }, () => {})
   }
-  fetchFeeRate()
-  setInterval(fetchFeeRate, 60 * 1000).unref()
 
   let lastRichlistUpdateTipHash = Buffer.alloc(0)
   function updateRichList() {
@@ -51,12 +41,24 @@ module.exports = function(agent) {
       lastRichlistUpdateTipHash = tip.hash
     }
   }
+
+  setInterval(fetchFeeRate, 60 * 1000).unref()
   setInterval(updateRichList, 2 * 60 * 1000).unref()
 
   agent.messenger.on('blockchain-info', () => {
     agent.messenger.sendToApp('blockchain-info', {tip, stakeWeight, feeRate})
   })
+  agent.messenger.on('stakeweight', result => {
+    stakeWeight = result
+  })
   agent.messenger.on('egg-ready', () => {
-    agent.messenger.sendToApp('blockchain-info', {tip, stakeWeight, feeRate})
+    let interval = setInterval(() => {
+      if (tip && stakeWeight && feeRate) {
+        agent.messenger.sendToApp('blockchain-info', {tip, stakeWeight, feeRate})
+        clearInterval(interval)
+      }
+    }, 0)
+    agent.messenger.sendRandom('get-stakeweight')
+    fetchFeeRate()
   })
 }
