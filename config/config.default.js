@@ -2,7 +2,7 @@ const path = require('path')
 
 exports.keys = 'qtuminfo-api-mainnet'
 
-exports.sequrity = {
+exports.security = {
   csrf: {enable: false}
 }
 
