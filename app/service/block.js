@@ -235,7 +235,7 @@ class BlockService extends Service {
 
   async getBiggestMiners(lastNBlocks) {
     const db = this.ctx.model
-    const {sql2} = this.ctx.helper
+    const {sql} = this.ctx.helper
     const {Block} = db
     const {gte: $gte} = this.app.Sequelize.Op
     let fromBlockHeight = lastNBlocks == null ? 5001 : Math.max(this.app.blockchainInfo.height - lastNBlocks + 1, 5001)
@@ -246,7 +246,7 @@ class BlockService extends Service {
       col: 'minerId',
       transaction: this.ctx.state.transaction
     })
-    let list = await db.query(sql2`
+    let list = await db.query(sql`
       SELECT address.string AS address, list.blocks AS blocks, rich_list.balance AS balance FROM (
         SELECT miner_id, COUNT(*) AS blocks FROM block
         WHERE height >= ${fromBlockHeight}
