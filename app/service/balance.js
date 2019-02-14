@@ -258,16 +258,20 @@ class BalanceService extends Service {
     let {limit, offset} = this.ctx.state.pagination
     let totalCount = await RichList.count({transaction: this.ctx.state.transaction})
     let list = await db.query(sql`
-      SELECT address.string AS address, rich_list.balance AS balance FROM (
-        SELECT address_id FROM rich_list ORDER BY balance DESC LIMIT ${offset}, ${limit}
-      ) list
+      SELECT
+        address.string AS address,
+        contract.address_string AS contractAddress, contract.address AS contractAddressHex,
+        rich_list.balance AS balance
+      FROM (SELECT address_id FROM rich_list ORDER BY balance DESC LIMIT ${offset}, ${limit}) list
       INNER JOIN rich_list USING (address_id)
       INNER JOIN address ON address._id = list.address_id
+      LEFT JOIN contract ON contract.address = address.data AND address.type IN ('contract', 'evm_contract')
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return {
       totalCount,
       list: list.map(item => ({
-        address: item.address,
+        address: item.contractAdress || item.address,
+        addressHex: item.contractAddressHex,
         balance: BigInt(item.balance)
       }))
     }

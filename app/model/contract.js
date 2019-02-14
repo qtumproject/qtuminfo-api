@@ -37,6 +37,8 @@ module.exports = app => {
 
   Contract.associate = () => {
     const {Address, Receipt, ReceiptLog} = app.model
+    Contract.hasOne(Address, {as: 'originalAddress', foreignKey: 'data'})
+    Address.belongsTo(Contract, {as: 'contract', foreignKey: 'data'})
     Address.hasOne(Contract, {as: 'createdContracts', foreignKey: 'ownerId'})
     Contract.belongsTo(Address, {as: 'owner', foreignKey: 'ownerId'})
     Receipt.belongsTo(Contract, {as: 'contract', foreignKey: 'contractAddress'})

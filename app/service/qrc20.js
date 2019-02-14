@@ -273,7 +273,8 @@ class ContractService extends Service {
       }
       for (let token of result.tokens) {
         let initial = initialBalanceMap.get(token.address) || 0n
-        token.balance = initial -= token.amount
+        token.balance = initial
+        initial -= token.amount
         initialBalanceMap.set(token.address, initial)
       }
       return result

@@ -212,7 +212,6 @@ class BlockService extends Service {
     let result = []
     for (let i = blocks.length; --i >= 0;) {
       let block = blocks[i]
-      let reward = rewards[i]
       let interval
       if (i === 0) {
         interval = prevHeader ? block.timestamp - prevHeader.timestamp : null
@@ -223,14 +222,14 @@ class BlockService extends Service {
         hash: block.hash,
         height: block.height,
         timestamp: block.timestamp,
-        transactionCount: block.block.transactionCount,
+        transactionsCount: block.block.transactionsCount + (block.height > 5000 ? 2 : 1),
         interval,
         size: block.block.size,
         miner: block.block.miner.string,
-        reward
+        reward: rewards[i]
       })
     }
-    return blocks
+    return result
   }
 
   async getBiggestMiners(lastNBlocks) {
@@ -261,6 +260,82 @@ class BlockService extends Service {
       totalCount,
       list: list.map(({address, blocks, balance}) => ({address, blocks, balance: BigInt(balance || 0)}))
     }
+  }
+
+  async getBlockTransactions(height) {
+    const {Transaction} = this.ctx.model
+    let transactions = await Transaction.findAll({
+      where: {blockHeight: height},
+      attributes: ['id'],
+      transaction: this.ctx.state.transaction
+    })
+    return transactions.map(tx => tx.id)
+  }
+
+  async getBlockAddressTransactions(height) {
+    const {Address, Transaction, BalanceChange, Receipt, ReceiptLog, Contract} = this.ctx.model
+    const {Address: RawAddress} = this.app.qtuminfo.lib
+    const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+    let result = []
+    let balanceChanges = await BalanceChange.findAll({
+      attributes: [],
+      include: [
+        {
+          model: Transaction,
+          as: 'transaction',
+          required: true,
+          where: {blockHeight: height},
+          attributes: ['indexInBlock']
+        },
+        {
+          model: Address,
+          as: 'address',
+          required: true,
+          attributes: ['string']
+        }
+      ]
+    })
+    for (let {transaction, address} of balanceChanges) {
+      result[transaction.indexInBlock] = result[transaction.indexInBlock] || new Set()
+      result[transaction.indexInBlock].add(address.string)
+    }
+    let receiptLogs = await ReceiptLog.findAll({
+      attributes: ['topic1', 'topic2', 'topic3', 'topic4'],
+      include: [
+        {
+          model: Receipt,
+          as: 'receipt',
+          required: true,
+          where: {blockHeight: height},
+          attributes: ['indexInBlock']
+        },
+        {
+          model: Contract,
+          as: 'contract',
+          required: true,
+          attributes: ['addressString', 'type']
+        }
+      ]
+    })
+    for (let {topic1, topic2, topic3, topic4, receipt, contract} of receiptLogs) {
+      let set = result[receipt.indexInBlock] = result[receipt.indexInBlock] || new Set()
+      set.add(contract.addressString)
+      if (Buffer.compare(topic1, TransferABI.id) === 0 && topic3) {
+        if (contract.type === 'qrc20' && !topic4 || contract.type === 'qrc721' && topic4) {
+          let sender = topic2.slice(12)
+          let receiver = topic3.slice(12)
+          if (Buffer.compare(sender, Buffer.alloc(20)) !== 0) {
+            set.add(new RawAddress({type: Address.PAY_TO_PUBLIC_KEY_HASH, data: sender, chain: this.app.chain}).toString())
+            set.add(new RawAddress({type: Address.EVM_CONTRACT, data: sender, chain: this.app.chain}).toString())
+          }
+          if (Buffer.compare(receiver, Buffer.alloc(20)) !== 0) {
+            set.add(new RawAddress({type: Address.PAY_TO_PUBLIC_KEY_HASH, data: receiver, chain: this.app.chain}).toString())
+            set.add(new RawAddress({type: Address.EVM_CONTRACT, data: receiver, chain: this.app.chain}).toString())
+          }
+        }
+      }
+    }
+    return result
   }
 }
 

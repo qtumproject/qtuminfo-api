@@ -9,6 +9,7 @@ class TransactionService extends Service {
       where, col
     } = this.ctx.model
     const {in: $in} = this.app.Sequelize.Op
+    const {Address: RawAddress} = this.app.qtuminfo.lib
 
     let transaction = await Transaction.findOne({
       where: {id},
@@ -50,7 +51,13 @@ class TransactionService extends Service {
         model: Address,
         as: 'address',
         required: false,
-        attributes: ['string']
+        attributes: ['type', 'string'],
+        include: [{
+          model: Contract,
+          as: 'contract',
+          required: false,
+          attributes: ['address', 'addressString']
+        }]
       }],
       order: [['inputIndex', 'ASC']],
       transaction: this.ctx.state.transaction
@@ -62,7 +69,13 @@ class TransactionService extends Service {
           model: Address,
           as: 'address',
           required: false,
-          attributes: ['string']
+          attributes: ['type', 'string'],
+          include: [{
+            model: Contract,
+            as: 'contract',
+            required: false,
+            attributes: ['address', 'addressString']
+          }]
         },
         {
           model: GasRefund,
@@ -163,7 +176,13 @@ class TransactionService extends Service {
             model: Address,
             as: 'address',
             required: false,
-            attributes: ['string']
+            attributes: ['type', 'string'],
+            include: [{
+              model: Contract,
+              as: 'contract',
+              required: false,
+              attributes: ['address', 'addressString']
+            }]
           }],
           order: [['inputIndex', 'ASC']],
           transaction: this.ctx.state.transaction
@@ -175,7 +194,13 @@ class TransactionService extends Service {
             model: Address,
             as: 'address',
             required: false,
-            attributes: ['string']
+            attributes: ['type', 'string'],
+            include: [{
+              model: Contract,
+              as: 'contract',
+              required: false,
+              attributes: ['address', 'addressString']
+            }]
           }],
           order: [['outputIndex', 'ASC']],
           transaction: this.ctx.state.transaction
@@ -183,11 +208,23 @@ class TransactionService extends Service {
         for (let id of contractSpendIds) {
           contractSpends.push({
             inputs: inputs.filter(input => Buffer.compare(input.inputTxId, id) === 0).map(input => ({
-              address: input.address.string,
+              address: input.address && ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
+                ? input.address.contract.addressString
+                : input.address.string
+              ),
+              addressHex: input.address && [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
+                ? input.address.contract.address
+                : null,
               value: input.value
             })),
             outputs: outputs.filter(output => Buffer.compare(output.outputTxId, id) === 0).map(output => ({
-              address: output.address.string,
+              address: output.address && ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
+                ? output.address.contract.addressString
+                : output.address.string
+              ),
+              addressHex: output.address && [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
+                ? output.address.contract.address
+                : null,
               value: output.value
             }))
           })
@@ -205,13 +242,25 @@ class TransactionService extends Service {
         outputIndex: input.outputIndex == null ? 0xfffffff : input.outputIndex,
         scriptSig: input.scriptSig,
         sequence: input.sequence,
-        address: input.address && input.address.string,
+        address: input.address && ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
+          ? input.address.contract.addressString
+          : input.address.string
+        ),
+        addressHex: input.address && [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
+          ? input.address.contract.address
+          : null,
         value: input.value
       })),
       outputs: outputs.map(output => {
         let outputObject = {
           scriptPubKey: output.scriptPubKey,
-          address: output.address && output.address.string,
+          address: output.address && ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
+            ? output.address.contract.addressString
+            : output.address.string
+          ),
+          addressHex: output.address && [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
+            ? output.address.contract.address
+            : null,
           value: output.value,
         }
         if (output.inputTxId) {
@@ -338,6 +387,30 @@ class TransactionService extends Service {
     })).map(tx => tx.id)
   }
 
+  async getMempoolTransactionAddresses(id) {
+    const {Address, Transaction, BalanceChange} = this.ctx.model
+    let balanceChanges = await BalanceChange.findAll({
+      attributes: [],
+      include: [
+        {
+          model: Transaction,
+          as: 'transaction',
+          required: true,
+          where: {id},
+          attributes: []
+        },
+        {
+          model: Address,
+          as: 'address',
+          required: true,
+          attributes: ['string']
+        }
+      ],
+      transaction: this.ctx.state.transaction
+    })
+    return balanceChanges.map(item => item.address.string)
+  }
+
   async transformTransaction(transaction, {brief = false} = {}) {
     let confirmations = transaction.block ? this.app.blockchainInfo.tip.height - transaction.block.height + 1 : 0
     let inputValue = transaction.inputs.map(input => input.value).reduce((x, y) => x + y)
@@ -394,10 +467,12 @@ class TransactionService extends Service {
       contractSpends: transaction.contractSpends.map(({inputs, outputs}) => ({
         inputs: inputs.map(input => ({
           address: input.address,
+          addressHex: input.addressHex.toString('hex'),
           value: input.value.toString()
         })),
         outputs: outputs.map(output => ({
           address: output.address,
+          addressHex: output.addressHex.toString('hex'),
           value: output.value.toString()
         }))
       })),
@@ -420,10 +495,11 @@ class TransactionService extends Service {
 
   transformInput(input, index, {brief}) {
     return {
+      prevTxId: input.prevTxId.toString('hex'),
       value: input.value.toString(),
       address: input.address,
+      addressHex: input.addressHex && input.addressHex.toString('hex'),
       ...brief ? {} : {
-        prevTxId: input.prevTxId.toString('hex'),
         outputIndex: input.outputIndex,
         sequence: input.sequence,
         index,
@@ -453,6 +529,7 @@ class TransactionService extends Service {
     let result = {
       value: output.value.toString(),
       address: output.address,
+      addressHex: output.addressHex && output.addressHex.toString('hex'),
       scriptPubKey: {type}
     }
     if (!brief) {
@@ -489,13 +566,11 @@ class TransactionService extends Service {
           if (qrc20 && topics.length === 3 && Buffer.compare(topics[0], TransferABI.id) === 0 && data.length === 32) {
             let [from, to] = await this.ctx.service.contract.transformHexAddresses([topics[1].slice(12), topics[2].slice(12)])
             result.push({
-              token: {
-                address,
-                addressHex: addressHex.toString('hex'),
-                name: qrc20.name,
-                symbol: qrc20.symbol,
-                decimals: qrc20.decimals
-              },
+              address,
+              addressHex: addressHex.toString('hex'),
+              name: qrc20.name,
+              symbol: qrc20.symbol,
+              decimals: qrc20.decimals,
               ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex.toString('hex')} : {from},
               ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex.toString('hex')} : {to},
               value: BigInt(`0x${data.toString('hex')}`).toString()
@@ -516,12 +591,10 @@ class TransactionService extends Service {
           if (qrc721 && topics.length === 4 && Buffer.compare(topics[0], TransferABI.id) === 0) {
             let [from, to] = await this.ctx.service.contract.transformHexAddresses([topics[1].slice(12), topics[2].slice(12)])
             result.push({
-              token: {
-                address,
-                addressHex: addressHex.toString('hex'),
-                name: qrc721.name,
-                symbol: qrc721.symbol
-              },
+              address,
+              addressHex: addressHex.toString('hex'),
+              name: qrc721.name,
+              symbol: qrc721.symbol,
               ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex.toString('hex')} : {from},
               ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex.toString('hex')} : {to},
               tokenId: topics[3].toString('hex')

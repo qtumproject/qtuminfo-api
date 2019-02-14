@@ -23,7 +23,7 @@ class TransactionController extends Controller {
       ctx.throw(404)
     }
     let ids = ctx.params.ids.split(',')
-    if (ids.length > 100 || !ids.some(id => !/^[0-9a-f]{64}$/i.test(id))) {
+    if (ids.length > 100 || ids.some(id => !/^[0-9a-f]{64}$/i.test(id))) {
       ctx.throw(400)
     }
     let brief = 'brief' in ctx.query
@@ -55,7 +55,12 @@ class TransactionController extends Controller {
     const {ctx} = this
     let count = Number.parseInt(ctx.query.count || 10)
     let ids = await ctx.service.transaction.getRecentTransactions(count)
-    ctx.body = ids.map(id => id.toString('hex'))
+    let transactions = await Promise.all(ids.map(
+      id => ctx.service.transaction.getTransaction(Buffer.from(id, 'hex'))
+    ))
+    ctx.body = await Promise.all(transactions.map(
+      tx => ctx.service.transaction.transformTransaction(tx, {brief: true})
+    ))
   }
 }
 

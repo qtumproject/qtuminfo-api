@@ -3,7 +3,7 @@ const {Controller} = require('egg')
 class MiscController extends Controller {
   async classify() {
     let {ctx} = this
-    ctx.body = await ctx.service.misc.classify(ctx.params.id)
+    ctx.body = await ctx.service.misc.classify(ctx.query.query)
   }
 
   async richList() {
@@ -13,6 +13,7 @@ class MiscController extends Controller {
       totalCount,
       list: list.map(item => ({
         address: item.address,
+        addressHex: item.addressHex && item.addressHex.toString('hex'),
         balance: item.balance.toString()
       }))
     }

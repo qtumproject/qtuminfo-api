@@ -3,7 +3,7 @@ const {Service} = require('egg')
 class MiscService extends Service {
   async classify(id) {
     const db = this.ctx.model
-    const {Block, Transaction, Contract, Qrc20: QRC20, where, fn, col} = db
+    const {Block, Transaction, Contract, Qrc20: QRC20, where, fn, literal} = db
     const {or: $or, like: $like} = this.app.Sequelize.Op
     const {Address} = this.app.qtuminfo.lib
     const {sql} = this.ctx.helper
@@ -49,8 +49,8 @@ class MiscService extends Service {
     let qrc20Results = (await QRC20.findAll({
       where: {
         [$or]: [
-          where(fn('LOWER', col('name')), id.toLowerCase()),
-          where(fn('LOWER', col('symbol')), id.toLowerCase())
+          where(fn('LOWER', fn('CONVERT', literal('name USING utf8mb4'))), id.toLowerCase()),
+          where(fn('LOWER', fn('CONVERT', literal('symbol USING utf8mb4'))), id.toLowerCase())
         ]
       },
       attributes: ['contractAddress'],
@@ -60,10 +60,10 @@ class MiscService extends Service {
       qrc20Results = (await QRC20.findAll({
         where: {
           [$or]: [
-            where(fn('LOWER', col('name')), {[$like]: ['', ...id.toLowerCase(), ''].join('%')}),
-            where(fn('LOWER', col('name')), {[$like]: `%${id.toLowerCase()}%`}),
-            where(fn('LOWER', col('symbol')), {[$like]: ['', ...id.toLowerCase(), ''].join('%')}),
-            where(fn('LOWER', col('symbol')), {[$like]: `%${id.toLowerCase()}%`})
+            where(fn('LOWER', fn('CONVERT', literal('name USING utf8mb4'))), {[$like]: ['', ...id.toLowerCase(), ''].join('%')}),
+            where(fn('LOWER', fn('CONVERT', literal('name USING utf8mb4'))), {[$like]: `%${id.toLowerCase()}%`}),
+            where(fn('LOWER', fn('CONVERT', literal('symbol USING utf8mb4'))), {[$like]: ['', ...id.toLowerCase(), ''].join('%')}),
+            where(fn('LOWER', fn('CONVERT', literal('symbol USING utf8mb4'))), {[$like]: `%${id.toLowerCase()}%`})
           ]
         },
         attributes: ['contractAddress'],
