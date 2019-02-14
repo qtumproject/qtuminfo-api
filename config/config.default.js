@@ -8,6 +8,17 @@ exports.security = {
 
 exports.middleware = ['transaction']
 
+exports.io = {
+  redis: {
+    host: 'localhost',
+    port: 6379,
+    db: 0
+  },
+  namespace: {
+    '/': {connectionMiddleware: ['connection']}
+  }
+}
+
 exports.sequelize = {
   Sequelize: require('sequelize'),
   dialect: 'mysql',

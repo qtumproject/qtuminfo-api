@@ -1,5 +1,5 @@
 module.exports = app => {
-  const {router, controller, middleware} = app
+  const {router, controller, io, middleware} = app
   const addressMiddleware = middleware.address()
   const contractMiddleware = middleware.contract()
   const paginationMiddleware = middleware.pagination()
@@ -105,7 +105,7 @@ module.exports = app => {
     controller.qrc20.richList
   )
 
-  router.get(`/search/:id`, controller.misc.classify)
+  router.get(`/search`, controller.misc.classify)
   router.get(
     '/misc/rich-list',
     paginationMiddleware,
@@ -116,4 +116,7 @@ module.exports = app => {
     paginationMiddleware,
     controller.misc.biggestMiners
   )
+
+  io.route('subscribe', io.controller.default.subscribe)
+  io.route('unsubscribe', io.controller.default.unsubscribe)
 }

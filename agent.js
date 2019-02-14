@@ -10,19 +10,22 @@ module.exports = function(agent) {
     io.on('tip', newTip => {
       tip = newTip
       agent.messenger.sendToApp('block-tip', tip)
+      agent.messenger.sendRandom('socket/block-tip', tip)
     })
     io.on('block', block => {
       tip = block
       agent.messenger.sendToApp('new-block', block)
       agent.messenger.sendRandom('get-stakeweight')
+      agent.messenger.sendRandom('socket/block-tip', block)
     })
     io.on('reorg', block => {
       tip = block
       agent.messenger.sendToApp('reorg-to-block', block)
+      agent.messenger.sendRandom('socket/reorg/block-tip', block)
     })
     io.on('mempool-transaction', id => {
       if (id) {
-        agent.messenger.sendToApp('mempool-transaction', id)
+        agent.messenger.sendRandom('socket/mempool-transaction', id)
       }
     })
   })
@@ -31,6 +34,7 @@ module.exports = function(agent) {
     let client = new agent.qtuminfo.rpc(agent.config.qtuminfo.rpc)
     client.estimatesmartfee(10).then(info => {
       feeRate = info.feerate
+      agent.messenger.sendRandom('socket/feerate', feeRate)
     }, () => {})
   }
 
