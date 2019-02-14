@@ -258,20 +258,15 @@ class BalanceService extends Service {
     let {limit, offset} = this.ctx.state.pagination
     let totalCount = await RichList.count({transaction: this.ctx.state.transaction})
     let list = await db.query(sql`
-      SELECT
-        address.string AS address,
-        contract.address_string AS contractAddress, contract.address AS contractAddressHex,
-        rich_list.balance AS balance
+      SELECT address.string AS address, rich_list.balance AS balance
       FROM (SELECT address_id FROM rich_list ORDER BY balance DESC LIMIT ${offset}, ${limit}) list
       INNER JOIN rich_list USING (address_id)
       INNER JOIN address ON address._id = list.address_id
-      LEFT JOIN contract ON contract.address = address.data AND address.type IN ('contract', 'evm_contract')
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return {
       totalCount,
       list: list.map(item => ({
-        address: item.contractAdress || item.address,
-        addressHex: item.contractAddressHex,
+        address: item.address,
         balance: BigInt(item.balance)
       }))
     }
@@ -285,11 +280,19 @@ class BalanceService extends Service {
       let file = `/tmp/qtuminfo-richlist-${uuidv4()}`
       const blockHeight = this.app.blockchainInfo.tip.height
       await db.query(sql`
-        SELECT address_id, SUM(value) AS value INTO OUTFILE ${file}
-        FROM transaction_output
-        WHERE address_id > 0 AND (input_height IS NULL OR input_height > ${blockHeight})
-          AND (output_height BETWEEN 1 AND ${blockHeight}) AND value > 0
-        GROUP BY address_id
+        SELECT list.address_id AS address_id, list.value AS value INTO OUTFILE ${file}
+        FROM (
+          SELECT address_id, SUM(value) AS value
+          FROM transaction_output
+          WHERE
+            address_id > 0
+            AND (input_height IS NULL OR input_height > ${blockHeight})
+            AND (output_height BETWEEN 1 AND ${blockHeight})
+            AND value > 0
+          GROUP BY address_id
+        ) list
+        INNER JOIN address ON address._id = list.address_id
+        WHERE address.type NOT IN ('contract', 'evm_contract')
       `, {transaction})
       await db.query(sql`DELETE FROM rich_list`, {transaction})
       await db.query(sql`LOAD DATA INFILE ${file} INTO TABLE rich_list`, {transaction})
