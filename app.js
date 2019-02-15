@@ -15,7 +15,25 @@ module.exports = app => {
     await ctx.service.balance.updateRichList()
   })
 
-  app.messenger.on('get-stakeweight', async () => {
+  app.messenger.on('update-daily-transactions', async () => {
+    let ctx = app.createAnonymousContext()
+    let dailyTransactions = await ctx.service.statistics.getDailyTransactions()
+    app.messenger.sendToAgent('daily-transactions', dailyTransactions)
+  })
+
+  app.messenger.on('update-block-interval', async () => {
+    let ctx = app.createAnonymousContext()
+    let blockInterval = await ctx.service.statistics.getBlockIntervalStatistics()
+    app.messenger.sendToAgent('block-interval', blockInterval)
+  })
+
+  app.messenger.on('update-address-growth', async () => {
+    let ctx = app.createAnonymousContext()
+    let addressGrowth = await ctx.service.statistics.getAddressGrowth()
+    app.messenger.sendToAgent('address-growth', addressGrowth)
+  })
+
+  app.messenger.on('update-stakeweight', async () => {
     let ctx = app.createAnonymousContext()
     let stakeWeight = await ctx.service.info.getStakeWeight()
     app.messenger.sendToAgent('stakeweight', stakeWeight)

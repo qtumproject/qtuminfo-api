@@ -117,6 +117,10 @@ module.exports = app => {
     controller.misc.biggestMiners
   )
 
+  router.get('/stats/daily-transactions', controller.statistics.dailyTransactions)
+  router.get('/stats/block-interval', controller.statistics.blockInterval)
+  router.get('/stats/address-growth', controller.statistics.addressGrowth)
+
   io.route('subscribe', io.controller.default.subscribe)
   io.route('unsubscribe', io.controller.default.unsubscribe)
 }

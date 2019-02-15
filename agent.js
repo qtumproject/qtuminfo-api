@@ -4,6 +4,9 @@ module.exports = function(agent) {
   let tip = null
   let stakeWeight = null
   let feeRate = null
+  let dailyTransactions = []
+  let blockInterval = []
+  let addressGrowth = []
 
   agent.messenger.on('egg-ready', () => {
     let io = SocketClient(`http://localhost:${agent.config.qtuminfo.port}`)
@@ -15,7 +18,7 @@ module.exports = function(agent) {
     io.on('block', block => {
       tip = block
       agent.messenger.sendToApp('new-block', block)
-      agent.messenger.sendRandom('get-stakeweight')
+      agent.messenger.sendRandom('update-stakeweight')
       agent.messenger.sendRandom('socket/block-tip', block)
     })
     io.on('reorg', block => {
@@ -38,16 +41,19 @@ module.exports = function(agent) {
     }, () => {})
   }
 
-  let lastRichlistUpdateTipHash = Buffer.alloc(0)
-  function updateRichList() {
-    if (tip && Buffer.compare(lastRichlistUpdateTipHash, tip.hash) !== 0) {
+  let lastTipHash = Buffer.alloc(0)
+  function updateStatistics() {
+    if (tip && Buffer.compare(lastTipHash, tip.hash) !== 0) {
       agent.messenger.sendRandom('update-richlist')
-      lastRichlistUpdateTipHash = tip.hash
+      agent.messenger.sendRandom('update-daily-transactions')
+      agent.messenger.sendRandom('update-block-interval')
+      agent.messenger.sendRandom('update-address-growth')
+      lastTipHash = tip.hash
     }
   }
 
   setInterval(fetchFeeRate, 60 * 1000).unref()
-  setInterval(updateRichList, 2 * 60 * 1000).unref()
+  setInterval(updateStatistics, 2 * 60 * 1000).unref()
 
   agent.messenger.on('blockchain-info', () => {
     agent.messenger.sendToApp('blockchain-info', {tip, stakeWeight, feeRate})
@@ -55,14 +61,35 @@ module.exports = function(agent) {
   agent.messenger.on('stakeweight', result => {
     stakeWeight = result
   })
+  agent.messenger.on('daily-transactions', result => {
+    dailyTransactions = result
+  })
+  agent.messenger.on('block-interval', result => {
+    blockInterval = result
+  })
+  agent.messenger.on('address-growth', result => {
+    addressGrowth = result
+  })
+
   agent.messenger.on('egg-ready', () => {
     let interval = setInterval(() => {
       if (tip && stakeWeight && feeRate) {
         agent.messenger.sendToApp('blockchain-info', {tip, stakeWeight, feeRate})
         clearInterval(interval)
+        updateStatistics()
       }
     }, 0)
-    agent.messenger.sendRandom('get-stakeweight')
+    agent.messenger.sendRandom('update-stakeweight')
     fetchFeeRate()
+  })
+
+  agent.messenger.on('fetch-daily-transactions', nonce => {
+    agent.messenger.sendToApp(`daily-transactions-${nonce}`, dailyTransactions)
+  })
+  agent.messenger.on('fetch-block-interval', nonce => {
+    agent.messenger.sendToApp(`block-interval-${nonce}`, blockInterval)
+  })
+  agent.messenger.on('fetch-address-growth', nonce => {
+    agent.messenger.sendToApp(`address-growth-${nonce}`, addressGrowth)
   })
 }
