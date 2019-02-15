@@ -239,7 +239,7 @@ class TransactionService extends Service {
       flag: transaction.flag,
       inputs: inputs.map(input => ({
         prevTxId: input.outputTxId || Buffer.alloc(32),
-        outputIndex: input.outputIndex == null ? 0xfffffff : input.outputIndex,
+        outputIndex: input.outputIndex == null ? 0xffffffff : input.outputIndex,
         scriptSig: input.scriptSig,
         sequence: input.sequence,
         address: input.address && ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
@@ -355,7 +355,7 @@ class TransactionService extends Service {
       flag: transaction.flag,
       inputs: inputs.map(input => new Input({
         prevTxId: input.outputTxId || Buffer.alloc(32),
-        outputIndex: input.outputIndex == null ? 0xfffffff : input.outputIndex,
+        outputIndex: input.outputIndex == null ? 0xffffffff : input.outputIndex,
         scriptSig: Script.fromBuffer(input.scriptSig, {isCoinbase: this.outputIndex == null, isInput: true}),
         sequence: input.sequence
       })),
