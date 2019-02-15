@@ -1,5 +1,3 @@
-const {promises: fs} = require('fs')
-const uuidv4 = require('uuid/v4')
 const {Service} = require('egg')
 
 class BalanceService extends Service {
@@ -274,15 +272,15 @@ class BalanceService extends Service {
 
   async updateRichList() {
     const db = this.ctx.model
+    const {RichList} = db
     const {sql} = this.ctx.helper
     let transaction = await db.transaction()
     try {
-      let file = `/tmp/qtuminfo-richlist-${uuidv4()}`
       const blockHeight = this.app.blockchainInfo.tip.height
-      await db.query(sql`
-        SELECT list.address_id AS address_id, list.value AS value INTO OUTFILE ${file}
+      let [list] = await db.query(sql`
+        SELECT list.address_id AS addressId, list.balance AS balance
         FROM (
-          SELECT address_id, SUM(value) AS value
+          SELECT address_id, SUM(value) AS balance
           FROM transaction_output
           WHERE
             address_id > 0
@@ -295,8 +293,10 @@ class BalanceService extends Service {
         WHERE address.type NOT IN ('contract', 'evm_contract')
       `, {transaction})
       await db.query(sql`DELETE FROM rich_list`, {transaction})
-      await db.query(sql`LOAD DATA INFILE ${file} INTO TABLE rich_list`, {transaction})
-      await fs.unlink(file)
+      await RichList.bulkCreate(
+        list.map(({addressId, balance}) => ({addressId, balance: BigInt(balance)})),
+        {validate: false, transaction, logging: false}
+      )
       await transaction.commit()
     } catch (err) {
       await transaction.rollback()
