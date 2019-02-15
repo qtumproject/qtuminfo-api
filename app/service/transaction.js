@@ -381,7 +381,7 @@ class TransactionService extends Service {
         ]
       },
       attributes: ['id'],
-      order: [['blockHeight', 'ASC'], ['indexInBlock', 'ASC'], ['_id', 'ASC']],
+      order: [['blockHeight', 'DESC'], ['indexInBlock', 'DESC'], ['_id', 'DESC']],
       limit: count,
       transaction: this.ctx.state.transaction
     })).map(tx => tx.id)
