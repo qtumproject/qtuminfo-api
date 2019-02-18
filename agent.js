@@ -33,12 +33,15 @@ module.exports = function(agent) {
     })
   })
 
-  function fetchFeeRate() {
+  async function fetchFeeRate() {
     let client = new agent.qtuminfo.rpc(agent.config.qtuminfo.rpc)
-    client.estimatesmartfee(10).then(info => {
+    let info = await client.estimatesmartfee(10)
+    if (info.feerate) {
       feeRate = info.feerate
-      agent.messenger.sendRandom('socket/feerate', feeRate)
-    }, () => {})
+    } else if (feeRate == null) {
+      feeRate = 0.004
+    }
+    agent.messenger.sendRandom('socket/feerate', feeRate)
   }
 
   let lastTipHash = Buffer.alloc(0)
