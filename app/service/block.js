@@ -126,7 +126,7 @@ class BlockService extends Service {
         model: Block,
         as: 'block',
         required: true,
-        attributes: ['size', 'transactionsCount'],
+        attributes: ['size'],
         include: [{
           model: Address,
           as: 'miner',
@@ -150,7 +150,7 @@ class BlockService extends Service {
         model: Block,
         as: 'block',
         required: true,
-        attributes: ['size', 'transactionsCount'],
+        attributes: ['size'],
         include: [{
           model: Address,
           as: 'miner',
@@ -200,7 +200,19 @@ class BlockService extends Service {
   }
 
   async getBlockSummary(blocks) {
-    const {Header} = this.ctx.model
+    const db = this.ctx.model
+    const {Header} = db
+    const {sql} = this.ctx.helper
+    let transactionCountMapping = new Map(
+      (await db.query(sql`
+        SELECT block.height AS height, MAX(transaction.index_in_block) + 1 AS transactionsCount
+        FROM block
+        INNER JOIN transaction ON block.height = transaction.block_height
+        WHERE block.height BETWEEN ${blocks[0].height} AND ${blocks[blocks.length - 1].height}
+        GROUP BY block.height
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction}))
+        .map(({height, transactionsCount}) => [height, transactionsCount])
+    )
     let [prevHeader, rewards] = await Promise.all([
       Header.findOne({
         where: {height: blocks[0].height - 1},
@@ -222,7 +234,7 @@ class BlockService extends Service {
         hash: block.hash,
         height: block.height,
         timestamp: block.timestamp,
-        transactionsCount: block.block.transactionsCount + (block.height > 5000 ? 2 : 1),
+        transactionsCount: transactionCountMapping.get(block.height),
         interval,
         size: block.block.size,
         miner: block.block.miner.string,
