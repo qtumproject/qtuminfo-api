@@ -1,4 +1,5 @@
 const path = require('path')
+const Redis = require('ioredis')
 
 exports.keys = 'qtuminfo-api-mainnet'
 
@@ -6,7 +7,25 @@ exports.security = {
   csrf: {enable: false}
 }
 
-exports.middleware = ['transaction']
+exports.middleware = ['ratelimit', 'transaction']
+
+exports.ratelimit = {
+  db: new Redis({
+    host: 'localhost',
+    port: 6379,
+    db: 0
+  }),
+  headers: {
+    remaining: 'Rate-Limit-Remaining',
+    reset: 'Rate-Limit-Reset',
+    total: 'Rate-Limit-Total',
+  },
+  disableHeader: false,
+  id: ctx => ctx.get('x-forwarded-for') || ctx.ip,
+  errorMessage: 'Rate Limit Exceeded',
+  duration: 10 * 60 * 1000,
+  max: 10 * 60
+}
 
 exports.io = {
   redis: {
