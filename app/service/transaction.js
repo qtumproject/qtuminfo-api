@@ -3,7 +3,7 @@ const {Service} = require('egg')
 class TransactionService extends Service {
   async getTransaction(id) {
     const {
-      Header, Address, Block,
+      Header, Address,
       Transaction, Witness, TransactionOutput, GasRefund, Receipt, ReceiptLog, ContractSpend,
       Contract, Qrc20: QRC20, Qrc721: QRC721,
       where, col
@@ -15,16 +15,10 @@ class TransactionService extends Service {
       where: {id},
       include: [
         {
-          model: Block,
-          as: 'block',
+          model: Header,
+          as: 'header',
           required: false,
-          attributes: ['hash'],
-          include: [{
-            model: Header,
-            as: 'header',
-            required: true,
-            attributes: ['timestamp']
-          }]
+          attributes: ['hash', 'timestamp']
         },
         {
           model: ContractSpend,
@@ -304,11 +298,11 @@ class TransactionService extends Service {
       }),
       witnesses: this.transformWitnesses(witnesses),
       lockTime: transaction.lockTime,
-      ...transaction.block ? {
+      ...transaction.header ? {
         block: {
-          hash: transaction.block.hash,
+          hash: transaction.header.hash,
           height: transaction.blockHeight,
-          timestamp: transaction.block.header.timestamp,
+          timestamp: transaction.header.timestamp,
         }
       } : {},
       ...transaction.contractSpendSource ? {contractSpendSource: transaction.contractSpendSource.destTxId} : {},
@@ -409,6 +403,12 @@ class TransactionService extends Service {
       transaction: this.ctx.state.transaction
     })
     return balanceChanges.map(item => item.address.string)
+  }
+
+  async sendRawTransaction(data) {
+    let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
+    let id = await client.sendrawtransaction(data.toString('hex'))
+    return Buffer.from(id, 'hex')
   }
 
   async transformTransaction(transaction, {brief = false} = {}) {

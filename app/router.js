@@ -17,6 +17,7 @@ module.exports = app => {
   router.get('/txs/:ids', controller.transaction.transactions)
   router.get('/raw-tx/:id', controller.transaction.rawTransaction)
   router.get('/recent-txs', controller.transaction.recent)
+  router.post('/tx/send', controller.transaction.send)
 
   router.get(
     '/address/:address',

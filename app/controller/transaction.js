@@ -62,6 +62,20 @@ class TransactionController extends Controller {
       tx => ctx.service.transaction.transformTransaction(tx, {brief: true})
     ))
   }
+
+  async send() {
+    const {ctx} = this
+    let {rawtx: data} = ctx.request.body
+    if (!/^([0-9a-f][0-9a-f])+$/i.test(data)) {
+      ctx.throw(400)
+    }
+    try {
+      let id = await ctx.service.transaction.sendRawTransaction(Buffer.from(data, 'hex'))
+      ctx.body = {status: 0, id: id.toString('hex')}
+    } catch (err) {
+      ctx.body = {status: 1, message: err.message}
+    }
+  }
 }
 
 module.exports = TransactionController
