@@ -66,11 +66,9 @@ class ContractController extends Controller {
       transactions: transactions.map(tx => ({
         id: tx.id.toString('hex'),
         ...tx.block ? {
-          block: {
-            hash: tx.block.hash.toString('hex'),
-            height: tx.block.height,
-            timestamp: tx.block.timestamp
-          }
+          blockHash: tx.block.hash.toString('hex'),
+          blockHeight: tx.block.height,
+          timestamp: tx.block.timestamp
         } : {},
         amount: tx.amount.toString(),
         balance: tx.balance.toString()
@@ -85,13 +83,9 @@ class ContractController extends Controller {
       totalCount,
       transactions: transactions.map(tx => ({
         id: tx.id.toString('hex'),
-        ...tx.block ? {
-          block: {
-            hash: tx.block.hash.toString('hex'),
-            height: tx.block.height,
-            timestamp: tx.block.timestamp
-          }
-        } : {},
+        hash: tx.block.hash.toString('hex'),
+        height: tx.block.height,
+        timestamp: tx.block.timestamp,
         tokens: tx.tokens.map(item => ({
           address: item.address,
           addressHex: item.addressHex.toString('hex'),

@@ -112,11 +112,9 @@ class AddressController extends Controller {
       totalCount,
       transactions: transactions.map(tx => ({
         id: tx.id.toString('hex'),
-        ...tx.block ? {
-          blockHash: tx.block.hash.toString('hex'),
-          blockHeight: tx.block.height,
-          timestamp: tx.block.timestamp
-        } : {},
+        blockHash: tx.block.hash.toString('hex'),
+        blockHeight: tx.block.height,
+        timestamp: tx.block.timestamp,
         tokens: tx.tokens.map(item => ({
           address: item.address,
           addressHex: item.addressHex.toString('hex'),

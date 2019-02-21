@@ -125,7 +125,7 @@ class ContractService extends Service {
         {
           model: Header,
           as: 'header',
-          required: false,
+          required: true,
           attributes: ['hash', 'timestamp']
         },
         {
