@@ -67,7 +67,7 @@ class TransactionController extends Controller {
     const {ctx} = this
     let {rawtx: data} = ctx.request.body
     if (!/^([0-9a-f][0-9a-f])+$/i.test(data)) {
-      ctx.throw(400)
+      ctx.body = {status: 1, message: 'TX decode failed'}
     }
     try {
       let id = await ctx.service.transaction.sendRawTransaction(Buffer.from(data, 'hex'))

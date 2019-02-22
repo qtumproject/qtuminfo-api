@@ -472,7 +472,7 @@ class TransactionService extends Service {
         })),
         outputs: outputs.map(output => ({
           address: output.address,
-          addressHex: output.addressHex.toString('hex'),
+          addressHex: output.addressHex && output.addressHex.toString('hex'),
           value: output.value.toString()
         }))
       })),
