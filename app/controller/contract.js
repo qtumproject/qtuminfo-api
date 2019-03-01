@@ -148,7 +148,6 @@ class ContractController extends Controller {
       }
     }
 
-
     let {totalCount, logs} = await ctx.service.contract.searchLogs({fromBlock, toBlock, contract, topic1, topic2, topic3, topic4})
     ctx.body = {
       totalCount,
