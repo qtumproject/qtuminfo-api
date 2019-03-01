@@ -98,6 +98,77 @@ class ContractController extends Controller {
       }))
     }
   }
+
+  async searchLogs() {
+    let {ctx} = this
+    let {fromBlock, toBlock, contract, topic1, topic2, topic3, topic4} = this.ctx.query
+    if (fromBlock != null) {
+      if (/^\d+$/.test(fromBlock)) {
+        fromBlock = Number.parseInt(fromBlock)
+      } else {
+        ctx.throw(400)
+      }
+    }
+    if (toBlock != null) {
+      if (/^\d+$/.test(toBlock)) {
+        toBlock = Number.parseInt(toBlock)
+      } else {
+        ctx.throw(400)
+      }
+    }
+    if (contract != null) {
+      contract = (await ctx.service.contract.getContractAddresses([contract]))[0]
+    }
+    if (topic1 != null) {
+      if (/^[0-9a-f]{32}$/i.test(topic1)) {
+        topic1 = Buffer.from(topic1, 'hex')
+      } else {
+        ctx.throw(400)
+      }
+    }
+    if (topic2 != null) {
+      if (/^[0-9a-f]{32}$/i.test(topic2)) {
+        topic2 = Buffer.from(topic2, 'hex')
+      } else {
+        ctx.throw(400)
+      }
+    }
+    if (topic3 != null) {
+      if (/^[0-9a-f]{32}$/i.test(topic3)) {
+        topic3 = Buffer.from(topic3, 'hex')
+      } else {
+        ctx.throw(400)
+      }
+    }
+    if (topic4 != null) {
+      if (/^[0-9a-f]{32}$/i.test(topic4)) {
+        topic4 = Buffer.from(topic4, 'hex')
+      } else {
+        ctx.throw(400)
+      }
+    }
+
+
+    let {totalCount, logs} = await ctx.service.contract.searchLogs({fromBlock, toBlock, contract, topic1, topic2, topic3, topic4})
+    ctx.body = {
+      totalCount,
+      logs: logs.map(log => ({
+        blockHash: log.blockHash.toString('hex'),
+        blockHeight: log.blockHeight,
+        timestamp: log.timestamp,
+        transactionId: log.transactionId.toString('hex'),
+        contractAddress: log.contractAddress,
+        contractAddressHex: log.contractAddressHex.toString('hex'),
+        address: log.address,
+        addressHex: log.addressHex.toString('hex'),
+        topic1: log.topic1 && log.topic1.toString('hex'),
+        topic2: log.topic2 && log.topic2.toString('hex'),
+        topic3: log.topic3 && log.topic3.toString('hex'),
+        topic4: log.topic4 && log.topic4.toString('hex'),
+        data: log.data.toString('hex')
+      }))
+    }
+  }
 }
 
 module.exports = ContractController

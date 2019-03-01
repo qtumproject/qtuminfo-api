@@ -11,10 +11,22 @@ module.exports = app => {
     receiptId: BIGINT.UNSIGNED,
     logIndex: INTEGER.UNSIGNED,
     address: CHAR(20).BINARY,
-    topic1: STRING(32).BINARY,
-    topic2: STRING(32).BINARY,
-    topic3: STRING(32).BINARY,
-    topic4: STRING(32).BINARY,
+    topic1: {
+      type: STRING(32).BINARY,
+      allowNull: true
+    },
+    topic2: {
+      type: STRING(32).BINARY,
+      allowNull: true
+    },
+    topic3: {
+      type: STRING(32).BINARY,
+      allowNull: true
+    },
+    topic4: {
+      type: STRING(32).BINARY,
+      allowNull: true
+    },
     data: BLOB
   }, {freezeTableName: true, underscored: true, timestamps: false})
 

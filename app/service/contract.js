@@ -1,6 +1,40 @@
 const {Service} = require('egg')
 
 class ContractService extends Service {
+  async getContractAddresses(list) {
+    const {Address} = this.app.qtuminfo.lib
+    const chain = this.app.chain
+    const {Contract} = this.ctx.model
+
+    let result = []
+    for (let item of list) {
+      let rawAddress
+      try {
+        rawAddress = Address.fromString(item, chain)
+      } catch (err) {
+        this.ctx.throw(400)
+      }
+      let filter
+      if (rawAddress.type === Address.CONTRACT) {
+        filter = {address: Buffer.from(item, 'hex')}
+      } else if (rawAddress.type === Address.EVM_CONTRACT) {
+        filter = {addressString: item}
+      } else {
+        this.ctx.throw(400)
+      }
+      let contractResult = await Contract.findOne({
+        where: filter,
+        attributes: ['address', 'addressString', 'vm', 'type'],
+        transaction: this.ctx.state.transaction
+      })
+      if (!contractResult) {
+        this.ctx.throw(404)
+      }
+      result.push(contractResult.address)
+    }
+    return result
+  }
+
   async getContractSummary(contractAddress, addressIds) {
     const {Address, Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance, Qrc721: QRC721} = this.ctx.model
     const {balance: balanceService, qrc20: qrc20Service} = this.ctx.service
@@ -149,6 +183,134 @@ class ContractService extends Service {
       WHERE tx._id = list._id
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction}).map(({id}) => id)
     return {totalCount, transactions}
+  }
+
+  async searchLogs({fromBlock, toBlock, contract, topic1, topic2, topic3, topic4} = {}) {
+    const db = this.ctx.model
+    const {Header, Transaction, Receipt, ReceiptLog, Contract} = db
+    const {in: $in, gte: $gte, lte: $lte, between: $between} = this.ctx.app.Sequelize.Op
+    const {sql} = this.ctx.helper
+    let {limit, offset} = this.ctx.state.pagination
+    let idFilter = {}
+    if (fromBlock != null && toBlock != null) {
+      let idResult = await db.query(sql`
+        SELECT MIN(_id) AS min, MAX(_id) AS max FROM receipt
+        WHERE block_height BETWEEN ${fromBlock} AND ${toBlock}
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+      if (idResult.length === 0) {
+        return {totalCount: 0, logs: []}
+      }
+      idFilter.receiptId = {[$between]: [idResult[0].min, idResult[0].max]}
+    } else if (fromBlock != null) {
+      let idResult = await db.query(sql`
+        SELECT MIN(_id) AS min FROM receipt
+        WHERE block_height >= ${fromBlock}
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+      if (idResult.length === 0) {
+        return {totalCount: 0, logs: []}
+      }
+      idFilter.receiptId = {[$gte]: [idResult[0].min]}
+    } else if (toBlock != null) {
+      let idResult = await db.query(sql`
+        SELECT MAX(_id) AS max FROM receipt
+        WHERE block_height <= ${toBlock}
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+      if (idResult.length === 0) {
+        return {totalCount: 0, logs: []}
+      }
+      idFilter.receiptId = {[$lte]: [idResult[0].max]}
+    }
+
+    await Receipt.findAll({
+      attributes: ['_id'],
+      limit: 10
+    })
+
+    let totalCount = await ReceiptLog.count({
+      where: {
+        ...idFilter,
+        ...contract ? {address: contract} : {},
+        ...topic1 ? {topic1} : {},
+        ...topic2 ? {topic2} : {},
+        ...topic3 ? {topic3} : {},
+        ...topic4 ? {topic4} : {}
+      },
+      transaction: this.ctx.state.transaction
+    })
+    let ids = await ReceiptLog.findAll({
+      where: {
+        ...idFilter,
+        ...contract ? {address: contract} : {},
+        ...topic1 ? {topic1} : {},
+        ...topic2 ? {topic2} : {},
+        ...topic3 ? {topic3} : {},
+        ...topic4 ? {topic4} : {}
+      },
+      attributes: ['_id'],
+      order: [['receiptId', 'ASC'], ['logIndex', 'ASC']],
+      limit,
+      offset,
+      transaction: this.ctx.state.transaction
+    })
+    let logs = await ReceiptLog.findAll({
+      where: {_id: {[$in]: ids.map(item => item._id)}},
+      attributes: ['topic1', 'topic2', 'topic3', 'topic4', 'data'],
+      include: [
+        {
+          model: Receipt,
+          as: 'receipt',
+          required: true,
+          attributes: ['transactionId', 'blockHeight'],
+          include: [
+            {
+              model: Transaction,
+              as: 'transaction',
+              required: true,
+              attributes: ['id'],
+              include: [{
+                model: Header,
+                as: 'header',
+                required: true,
+                attributes: ['hash', 'height', 'timestamp']
+              }]
+            },
+            {
+              model: Contract,
+              as: 'contract',
+              required: true,
+              attributes: ['address', 'addressString']
+            }
+          ]
+        },
+        {
+          model: Contract,
+          as: 'contract',
+          required: true,
+          attributes: ['address', 'addressString']
+        }
+      ],
+      order: [['_id', 'ASC']],
+      transaction: this.ctx.state.transaction
+    })
+
+    return {
+      totalCount,
+      logs: logs.map(log => ({
+        blockHash: log.receipt.transaction.header.hash,
+        blockHeight: log.receipt.transaction.header.height,
+        timestamp: log.receipt.transaction.header.timestamp,
+        transactionId: log.receipt.transaction.id,
+        contractAddress: log.receipt.contract.addressString,
+        contractAddressHex: log.receipt.contract.address,
+        address: log.contract.addressString,
+        addressHex: log.contract.address,
+        topic1: log.topic1,
+        topic2: log.topic2,
+        topic3: log.topic3,
+        topic4: log.topic4,
+        data: log.data
+      }))
+    }
   }
 
   async transformHexAddresses(addresses) {
