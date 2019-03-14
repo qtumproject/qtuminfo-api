@@ -13,7 +13,7 @@ class TransactionController extends Controller {
 
   async transactions() {
     const {ctx} = this
-    ctx.assert(ctx.params.id, 404)
+    ctx.assert(ctx.params.ids, 404)
     let ids = ctx.params.ids.split(',')
     ctx.assert(ids.length <= 100 && ids.every(id => /^[0-9a-f]{64}$/i.test(id)), 404)
     let brief = 'brief' in ctx.query
