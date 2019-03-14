@@ -1,6 +1,6 @@
 const {Service} = require('egg')
 
-class ContractService extends Service {
+class QRC20Service extends Service {
   async listQRC20Tokens() {
     const db = this.ctx.model
     const {sql} = this.ctx.helper
@@ -320,4 +320,4 @@ class ContractService extends Service {
   }
 }
 
-module.exports = ContractService
+module.exports = QRC20Service

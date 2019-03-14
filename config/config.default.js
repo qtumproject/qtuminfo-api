@@ -21,7 +21,7 @@ exports.ratelimit = {
     total: 'Rate-Limit-Total',
   },
   disableHeader: false,
-  id: ctx => ctx.get('x-forwarded-for') || ctx.ip,
+  id: ctx => `qtuminfo-api-mainnet-${ctx.get('x-forwarded-for') || ctx.ip}`,
   errorMessage: 'Rate Limit Exceeded',
   duration: 10 * 60 * 1000,
   max: 10 * 60
