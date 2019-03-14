@@ -28,9 +28,7 @@ module.exports = ({defaultPageSize = 100} = {}) => async function pagination(ctx
     limit = to - from + 1
     offset = from
   }
-  if (!(limit > 0) || !(offset >= 0)) {
-    ctx.throw(400)
-  }
+  ctx.assert(limit > 0 && offset >= 0, 400)
   if ('reversed' in object) {
     reversed = ![false, 'false', 0, '0'].includes(object.reversed)
   }

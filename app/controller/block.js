@@ -4,19 +4,16 @@ class BlockController extends Controller {
   async block() {
     const {ctx} = this
     let arg = ctx.params.block
-    if (!arg) {
-      ctx.throw(404)
-    } else if (/^(0|[1-9]\d{0,9})$/.test(arg)) {
-      arg = Number(arg)
+    ctx.assert(arg, 404)
+    if (/^(0|[1-9]\d{0,9})$/.test(arg)) {
+      arg = Number.parseInt(arg)
     } else if (/^[0-9a-f]{64}$/i.test(arg)) {
       arg = Buffer.from(arg, 'hex')
     } else {
       ctx.throw(400)
     }
     let block = await ctx.service.block.getBlock(arg)
-    if (!block) {
-      ctx.throw(404)
-    }
+    ctx.assert(block, 404)
     ctx.body = {
       hash: block.hash.toString('hex'),
       height: block.height,
@@ -48,19 +45,16 @@ class BlockController extends Controller {
   async rawBlock() {
     const {ctx} = this
     let arg = ctx.params.block
-    if (!arg) {
-      ctx.throw(404)
-    } else if (/^(0|[1-9]\d{0,9})$/.test(arg)) {
-      arg = Number(arg)
+    ctx.assert(arg, 404)
+    if (/^(0|[1-9]\d{0,9})$/.test(arg)) {
+      arg = Number.parseInt(arg)
     } else if (/^[0-9a-f]{64}$/i.test(arg)) {
       arg = Buffer.from(arg, 'hex')
     } else {
       ctx.throw(400)
     }
     let block = await ctx.service.block.getRawBlock(arg)
-    if (!block) {
-      ctx.throw(404)
-    }
+    ctx.assert(block, 404)
     ctx.body = block.toBuffer().toString('hex')
   }
 

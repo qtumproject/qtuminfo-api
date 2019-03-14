@@ -27,9 +27,7 @@ class ContractService extends Service {
         attributes: ['address', 'addressString', 'vm', 'type'],
         transaction: this.ctx.state.transaction
       })
-      if (!contractResult) {
-        this.ctx.throw(404)
-      }
+      this.ctx.assert(contractResult, 404)
       result.push(contractResult.address)
     }
     return result

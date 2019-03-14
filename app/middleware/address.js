@@ -1,7 +1,5 @@
 module.exports = () => async function address(ctx, next) {
-  if (!ctx.params.address) {
-    ctx.throw(404)
-  }
+  ctx.assert(ctx.params.address, 404)
   const {Address: RawAddress} = ctx.app.qtuminfo.lib
   const chain = ctx.app.chain
   const {Address} = ctx.model

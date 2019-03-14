@@ -1,7 +1,5 @@
 module.exports = () => async function contract(ctx, next) {
-  if (!ctx.params.contract) {
-    ctx.throw(404)
-  }
+  ctx.assert(ctx.params.contract, 404)
   const {Address: RawAddress} = ctx.app.qtuminfo.lib
   const chain = ctx.app.chain
   const {Address, Contract} = ctx.model
@@ -27,9 +25,7 @@ module.exports = () => async function contract(ctx, next) {
     attributes: ['address', 'addressString', 'vm', 'type'],
     transaction: ctx.state.transaction
   })
-  if (!contractResult) {
-    ctx.throw(404)
-  }
+  ctx.assert(contractResult, 404)
   contract.contractAddress = contractResult.address
   contract.address = contractResult.addressString
   contract.vm = contractResult.vm
