@@ -110,6 +110,11 @@ module.exports = app => {
     contractMiddleware, paginationMiddleware,
     controller.qrc20.richList
   )
+  router.get(
+    '/qrc721',
+    paginationMiddleware,
+    controller.qrc721.list
+  )
 
   router.get(`/search`, controller.misc.classify)
   router.get(

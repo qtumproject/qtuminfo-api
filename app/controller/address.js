@@ -20,6 +20,13 @@ class AddressController extends Controller {
         decimals: item.decimals,
         balance: item.balance.toString()
       })),
+      qrc721Balances: summary.qrc721Balances.map(item => ({
+        address: item.address,
+        addressHex: item.addressHex.toString('hex'),
+        name: item.name,
+        symbol: item.symbol,
+        count: item.count
+      })),
       ranking: summary.ranking,
       transactionCount: summary.transactionCount,
       blocksMined: summary.blocksMined

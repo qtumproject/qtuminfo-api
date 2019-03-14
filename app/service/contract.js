@@ -35,7 +35,7 @@ class ContractService extends Service {
 
   async getContractSummary(contractAddress, addressIds) {
     const {Address, Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance, Qrc721: QRC721} = this.ctx.model
-    const {balance: balanceService, qrc20: qrc20Service} = this.ctx.service
+    const {balance: balanceService, qrc20: qrc20Service, qrc721: qrc721Service} = this.ctx.service
     const {ne: $ne} = this.app.Sequelize.Op
     let contract = await Contract.findOne({
       where: {address: contractAddress},
@@ -76,11 +76,13 @@ class ContractService extends Service {
       {totalReceived, totalSent},
       unconfirmed,
       qrc20Balances,
+      qrc721Balances,
       transactionCount
     ] = await Promise.all([
       balanceService.getTotalBalanceChanges(addressIds),
       balanceService.getUnconfirmedBalance(addressIds),
       qrc20Service.getAllQRC20Balances([contractAddress]),
+      qrc721Service.getAllQRC721Balances([contractAddress]),
       this.getContractTransactionCount(contractAddress, addressIds)
     ])
     return {
@@ -113,6 +115,7 @@ class ContractService extends Service {
       totalSent,
       unconfirmed,
       qrc20Balances,
+      qrc721Balances,
       transactionCount
     }
   }

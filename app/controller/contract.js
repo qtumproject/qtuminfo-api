@@ -28,7 +28,7 @@ class ContractController extends Controller {
         qrc721: {
           name: summary.qrc721.name,
           symbol: summary.qrc721.symbol,
-          totalSupply: summary.qrc721.totalSupply
+          totalSupply: summary.qrc721.totalSupply.toString()
         }
       } : {},
       balance: summary.balance.toString(),
@@ -42,6 +42,13 @@ class ContractController extends Controller {
         symbol: item.symbol,
         decimals: item.decimals,
         balance: item.balance.toString()
+      })),
+      qrc721Balances: summary.qrc721Balances.map(item => ({
+        address: item.address,
+        addressHex: item.addressHex.toString('hex'),
+        name: item.name,
+        symbol: item.symbol,
+        count: item.count
       })),
       transactionCount: summary.transactionCount
     }
@@ -103,14 +110,14 @@ class ContractController extends Controller {
     let {ctx} = this
     let {fromBlock, toBlock, contract, topic1, topic2, topic3, topic4} = this.ctx.query
     if (fromBlock != null) {
-      if (/^\d+$/.test(fromBlock)) {
+      if (/^(0|[1-9]\d{0,9})$/.test(fromBlock)) {
         fromBlock = Number.parseInt(fromBlock)
       } else {
         ctx.throw(400)
       }
     }
     if (toBlock != null) {
-      if (/^\d+$/.test(toBlock)) {
+      if (/^(0|[1-9]\d{0,9})$/.test(toBlock)) {
         toBlock = Number.parseInt(toBlock)
       } else {
         ctx.throw(400)
@@ -120,28 +127,28 @@ class ContractController extends Controller {
       contract = (await ctx.service.contract.getContractAddresses([contract]))[0]
     }
     if (topic1 != null) {
-      if (/^[0-9a-f]{32}$/i.test(topic1)) {
+      if (/^[0-9a-f]{64}$/i.test(topic1)) {
         topic1 = Buffer.from(topic1, 'hex')
       } else {
         ctx.throw(400)
       }
     }
     if (topic2 != null) {
-      if (/^[0-9a-f]{32}$/i.test(topic2)) {
+      if (/^[0-9a-f]{64}$/i.test(topic2)) {
         topic2 = Buffer.from(topic2, 'hex')
       } else {
         ctx.throw(400)
       }
     }
     if (topic3 != null) {
-      if (/^[0-9a-f]{32}$/i.test(topic3)) {
+      if (/^[0-9a-f]{64}$/i.test(topic3)) {
         topic3 = Buffer.from(topic3, 'hex')
       } else {
         ctx.throw(400)
       }
     }
     if (topic4 != null) {
-      if (/^[0-9a-f]{32}$/i.test(topic4)) {
+      if (/^[0-9a-f]{64}$/i.test(topic4)) {
         topic4 = Buffer.from(topic4, 'hex')
       } else {
         ctx.throw(400)
