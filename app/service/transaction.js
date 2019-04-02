@@ -432,7 +432,7 @@ class TransactionService extends Service {
         }
       }]
       : transaction.inputs.map((input, index) => this.transformInput(input, index, {brief}))
-    let outputs = transaction.outputs.map((output, index) => this.transformOutput(output, index, {transaction, brief}))
+    let outputs = transaction.outputs.map((output, index) => this.transformOutput(output, index, {brief}))
 
     let [qrc20TokenTransfers, qrc721TokenTransfers] = await Promise.all([
       this.transformQRC20Transfers(transaction.outputs),
@@ -514,18 +514,22 @@ class TransactionService extends Service {
     }
   }
 
-  transformOutput(output, index, {transaction, brief}) {
-    const {Address, Script} = this.app.qtuminfo.lib
+  transformOutput(output, index, {brief}) {
+    const {Script} = this.app.qtuminfo.lib
     let scriptPubKey = Script.fromBuffer(output.scriptPubKey, {isOutput: true})
-    let type
-    let address = Address.fromScript(scriptPubKey, this.app.chain, transaction.id, index)
-    if (address) {
-      type = address.type
-    } else if (scriptPubKey.isDataOut()) {
-      type = 'nulldata'
-    } else {
-      type = 'nonstandard'
-    }
+    let type = {
+      [Script.UNKNOWN]: 'nonstandard',
+      [Script.PUBKEY_OUT]: 'pubkey',
+      [Script.PUBKEYHASH_OUT]: 'pubkeyhash',
+      [Script.SCRIPT_OUT]: 'scripthash',
+      [Script.MULTISIG_OUT]: 'multisig',
+      [Script.DATA_OUT]: 'nulldata',
+      [Script.WITNESS_V0_KEYHASH]: 'witness_v0_keyhash',
+      [Script.WITNESS_V0_SCRIPTHASH]: 'witness_v0_scripthash',
+      [Script.EVM_CONTRACT_CREATE]: 'create',
+      [Script.EVM_CONTRACT_CALL]: 'call',
+      [Script.CONTRACT_OUT]: 'call',
+    }[scriptPubKey.type]
     let result = {
       value: output.value.toString(),
       address: output.address,
