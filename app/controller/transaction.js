@@ -55,16 +55,7 @@ class TransactionController extends Controller {
     }
     try {
       let id = await ctx.service.transaction.sendRawTransaction(Buffer.from(data, 'hex'))
-      let transaction
-      for (let i = 0; i < 10; ++i) {
-        await new Promise(resolve => setTimeout(resolve, 500))
-        transaction = await ctx.service.transaction.getTransaction(id)
-        if (transaction) {
-          ctx.body = {status: 0, ...await ctx.service.transaction.transformTransaction(transaction)}
-          return
-        }
-      }
-      ctx.body = {status: 1, id: id.toString('hex'), txid: id.toString('hex'), message: 'Waiting for response'}
+      ctx.body = {status: 0, id: id.toString('hex'), txid: id.toString('hex')}
     } catch (err) {
       ctx.body = {status: 1, message: err.message}
     }
