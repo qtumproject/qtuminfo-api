@@ -52,6 +52,12 @@ module.exports = app => {
   app.messenger.on('reorg-to-block', block => {
     app.blockchainInfo.tip = block
   })
+  app.messenger.on('stakeweight', stakeWeight => {
+    app.blockchainInfo.stakeWeight = stakeWeight
+  })
+  app.messenger.on('feerate', feeRate => {
+    app.blockchainInfo.feeRate = feeRate
+  })
 
   app.messenger.on('socket/block-tip', async tip => {
     app.blockchainInfo.tip = tip

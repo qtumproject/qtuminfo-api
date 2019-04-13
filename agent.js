@@ -41,6 +41,7 @@ module.exports = function(agent) {
     } else if (feeRate == null) {
       feeRate = 0.004
     }
+    agent.messenger.sendToApp('feerate', feeRate)
     agent.messenger.sendRandom('socket/feerate', feeRate)
   }
 
@@ -63,6 +64,7 @@ module.exports = function(agent) {
   })
   agent.messenger.on('stakeweight', result => {
     stakeWeight = result
+    agent.messenger.sendToApp('stakeweight', stakeWeight)
   })
   agent.messenger.on('daily-transactions', result => {
     dailyTransactions = result
