@@ -117,25 +117,18 @@ class BlockService extends Service {
   }
 
   async listBlocks(min, max) {
-    const {Header, Address, Block} = this.ctx.model
-    const {between: $between} = this.app.Sequelize.Op
-    let blocks = await Header.findAll({
-      where: {timestamp: {[$between]: [min, max - 1]}},
-      attributes: ['hash', 'height', 'timestamp'],
-      include: [{
-        model: Block,
-        as: 'block',
-        required: true,
-        attributes: ['size'],
-        include: [{
-          model: Address,
-          as: 'miner',
-          attributes: ['string']
-        }]
-      }],
-      order: [['height', 'ASC']],
-      transaction: this.ctx.state.transaction
-    })
+    const db = this.ctx.model
+    const {sql} = this.ctx.helper
+    let blocks = await db.query(sql`
+      SELECT
+        l.hash AS hash, l.height AS height, l.timestamp AS timestamp,
+        block.size AS size, address.string AS miner
+      FROM (
+        SELECT hash, height, timestamp FROM header
+        WHERE timestamp BETWEEN ${min} AND ${max - 1}
+        ORDER BY height ASC
+      ) l, block, address WHERE l.height = block.height AND address._id = block.miner_id
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     if (blocks.length === 0) {
       return []
     }
@@ -143,24 +136,18 @@ class BlockService extends Service {
   }
 
   async getRecentBlocks(count) {
-    const {Header, Address, Block} = this.ctx.model
-    let blocks = await Header.findAll({
-      attributes: ['hash', 'height', 'timestamp'],
-      include: [{
-        model: Block,
-        as: 'block',
-        required: true,
-        attributes: ['size'],
-        include: [{
-          model: Address,
-          as: 'miner',
-          attributes: ['string']
-        }]
-      }],
-      order: [['height', 'DESC']],
-      limit: count,
-      transaction: this.ctx.state.transaction
-    })
+    const db = this.ctx.model
+    const {sql} = this.ctx.helper
+    let blocks = await db.query(sql`
+      SELECT
+        l.hash AS hash, l.height AS height, header.timestamp AS timestamp,
+        l.size AS size, address.string AS miner
+      FROM (
+        SELECT hash, height, size, miner_id FROM block
+        ORDER BY height DESC
+        LIMIT ${count}
+      ) l, header, address WHERE l.height = header.height AND l.miner_id = address._id
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     if (blocks.length === 0) {
       return []
     }
@@ -236,8 +223,8 @@ class BlockService extends Service {
         timestamp: block.timestamp,
         transactionsCount: transactionCountMapping.get(block.height),
         interval,
-        size: block.block.size,
-        miner: block.block.miner.string,
+        size: block.size,
+        miner: block.miner,
         reward: rewards[i]
       })
     }
