@@ -37,7 +37,12 @@ module.exports = app => {
     let ctx = app.createAnonymousContext()
     let stakeWeight = await ctx.service.info.getStakeWeight()
     app.messenger.sendToAgent('stakeweight', stakeWeight)
-    namespace.to('blockchain').emit('stakeweight', stakeWeight)
+  })
+
+  app.messenger.on('update-feerate', async () => {
+    let ctx = app.createAnonymousContext()
+    let feeRate = await ctx.service.info.getFeeRate()
+    app.messenger.sendToAgent('feerate', feeRate)
   })
 
   app.messenger.on('blockchain-info', info => {
@@ -92,6 +97,10 @@ module.exports = app => {
     for (let address of addresses) {
       namespace.to(`address/${address}`).emit('address/transaction', {address, id: id.toString('hex')})
     }
+  })
+
+  app.messenger.on('socket/stakeweight', stakeWeight => {
+    namespace.to('blockchain').emit('stakeweight', stakeWeight)
   })
 
   app.messenger.on('socket/feerate', feeRate => {

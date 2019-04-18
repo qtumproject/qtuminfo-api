@@ -34,15 +34,7 @@ module.exports = function(agent) {
   })
 
   async function fetchFeeRate() {
-    let client = new agent.qtuminfo.rpc(agent.config.qtuminfo.rpc)
-    let info = await client.estimatesmartfee(10)
-    if (info.feerate) {
-      feeRate = info.feerate
-    } else if (feeRate == null) {
-      feeRate = 0.004
-    }
-    agent.messenger.sendToApp('feerate', feeRate)
-    agent.messenger.sendRandom('socket/feerate', feeRate)
+    agent.messenger.sendToApp('update-feerate')
   }
 
   let lastTipHash = Buffer.alloc(0)
@@ -65,6 +57,16 @@ module.exports = function(agent) {
   agent.messenger.on('stakeweight', result => {
     stakeWeight = result
     agent.messenger.sendToApp('stakeweight', stakeWeight)
+    agent.messenger.sendRandom('socket/stakeweight', stakeWeight)
+  })
+  agent.messenger.on('feerate', result => {
+    if (result) {
+      feeRate = result
+    } else if (feeRate == null) {
+      feeRate = 0.004
+    }
+    agent.messenger.sendToApp('feerate', feeRate)
+    agent.messenger.sendRandom('socket/feerate', feeRate)
   })
   agent.messenger.on('daily-transactions', result => {
     dailyTransactions = result

@@ -55,6 +55,12 @@ class InfoService extends Service {
       .reduce((x, y) => x + y)
     return sum * 2 ** 32 * 16 / interval
   }
+
+  async getFeeRate() {
+    let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
+    let info = await client.estimatesmartfee(10)
+    return info.feerate
+  }
 }
 
 module.exports = InfoService
