@@ -8,7 +8,8 @@ class InfoService extends Service {
       supply: this.getTotalSupply(info.tip.height),
       circulatingSupply: this.getCirculatingSupply(info.tip.height),
       netStakeWeight: Math.round(info.stakeWeight),
-      feeRate: info.feeRate
+      feeRate: info.feeRate,
+      dgpInfo: info.dgpInfo
     }
   }
 
@@ -60,6 +61,16 @@ class InfoService extends Service {
     let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
     let info = await client.estimatesmartfee(10)
     return info.feerate
+  }
+
+  async getDGPInfo() {
+    let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
+    let info = await client.getdgpinfo()
+    return {
+      maxBlockSize: info.maxblocksize,
+      minGasPrice: info.mingasprice,
+      blockGasLimit: info.blockgaslimit
+    }
   }
 }
 

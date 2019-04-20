@@ -2,7 +2,10 @@ module.exports = app => {
   app.blockchainInfo = {
     tip: null,
     stakeWeight: null,
-    feeRate: null
+    feeRate: null,
+    maxBlockSize: null,
+    minGasPrice: null,
+    blockGasLimit: null
   }
   const namespace = app.io.of('/')
 
@@ -45,6 +48,12 @@ module.exports = app => {
     app.messenger.sendToAgent('feerate', feeRate)
   })
 
+  app.messenger.on('update-dgpinfo', async () => {
+    let ctx = app.createAnonymousContext()
+    let dgpInfo = await ctx.service.info.getDGPInfo()
+    app.messenger.sendToAgent('dgpinfo', dgpInfo)
+  })
+
   app.messenger.on('blockchain-info', info => {
     app.blockchainInfo = info
   })
@@ -62,6 +71,9 @@ module.exports = app => {
   })
   app.messenger.on('feerate', feeRate => {
     app.blockchainInfo.feeRate = feeRate
+  })
+  app.messenger.on('dgpinfo', dgpInfo => {
+    app.blockchainInfo.dgpInfo = dgpInfo
   })
 
   app.messenger.on('socket/block-tip', async tip => {
@@ -102,8 +114,10 @@ module.exports = app => {
   app.messenger.on('socket/stakeweight', stakeWeight => {
     namespace.to('blockchain').emit('stakeweight', stakeWeight)
   })
-
   app.messenger.on('socket/feerate', feeRate => {
     namespace.to('blockchain').emit('feerate', feeRate)
+  })
+  app.messenger.on('socket/dgpinfo', dgpInfo => {
+    namespace.to('blockchain').emit('dgpinfo', dgpInfo)
   })
 }

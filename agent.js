@@ -4,6 +4,7 @@ module.exports = function(agent) {
   let tip = null
   let stakeWeight = null
   let feeRate = null
+  let dgpInfo = null
   let dailyTransactions = []
   let blockInterval = []
   let addressGrowth = []
@@ -19,6 +20,7 @@ module.exports = function(agent) {
       tip = block
       agent.messenger.sendToApp('new-block', block)
       agent.messenger.sendRandom('update-stakeweight')
+      agent.messenger.sendRandom('update-dgpinfo')
       agent.messenger.sendRandom('socket/block-tip', block)
     })
     io.on('reorg', block => {
@@ -68,6 +70,11 @@ module.exports = function(agent) {
     agent.messenger.sendToApp('feerate', feeRate)
     agent.messenger.sendRandom('socket/feerate', feeRate)
   })
+  agent.messenger.on('dgpinfo', result => {
+    dgpInfo = result
+    agent.messenger.sendToApp('dgpinfo', dgpInfo)
+    agent.messenger.sendRandom('socket/dgpinfo', dgpInfo)
+  })
   agent.messenger.on('daily-transactions', result => {
     dailyTransactions = result
   })
@@ -80,14 +87,15 @@ module.exports = function(agent) {
 
   agent.messenger.on('egg-ready', () => {
     let interval = setInterval(() => {
-      if (tip && stakeWeight && feeRate) {
-        agent.messenger.sendToApp('blockchain-info', {tip, stakeWeight, feeRate})
+      if (tip && stakeWeight && feeRate && dgpInfo) {
+        agent.messenger.sendToApp('blockchain-info', {tip, stakeWeight, feeRate, dgpInfo})
         clearInterval(interval)
         updateStatistics()
       }
     }, 0)
     agent.messenger.sendRandom('update-stakeweight')
     fetchFeeRate()
+    agent.messenger.sendRandom('update-dgpinfo')
   })
 
   agent.messenger.on('fetch-daily-transactions', nonce => {
