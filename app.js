@@ -3,9 +3,7 @@ module.exports = app => {
     tip: null,
     stakeWeight: null,
     feeRate: null,
-    maxBlockSize: null,
-    minGasPrice: null,
-    blockGasLimit: null
+    dgpInfo: null
   }
   const namespace = app.io.of('/')
 
