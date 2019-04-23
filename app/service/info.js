@@ -31,10 +31,14 @@ class InfoService extends Service {
     }
   }
 
+  getTotalMaxSupply() {
+    return 1e8 + 985500 * 4 * (1 - 1 / 2 ** 7) / (1 - 1 / 2)
+  }
+
   getCirculatingSupply(height) {
     let totalSupply = this.getTotalSupply(height)
     if (this.app.config.qtum.chain === 'mainnet') {
-      return totalSupply - 12e6
+      return totalSupply - 575e4
     } else {
       return totalSupply
     }

@@ -6,6 +6,7 @@ module.exports = app => {
 
   router.get('/info', controller.info.index)
   router.get('/supply', controller.info.supply)
+  router.get('/total-max-supply', controller.info.totalMaxSupply)
   router.get('/circulating-supply', controller.info.circulatingSupply)
 
   router.get('/blocks', controller.block.list)
