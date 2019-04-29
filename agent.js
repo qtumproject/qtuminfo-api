@@ -54,7 +54,7 @@ module.exports = function(agent) {
   setInterval(updateStatistics, 2 * 60 * 1000).unref()
 
   agent.messenger.on('blockchain-info', () => {
-    agent.messenger.sendToApp('blockchain-info', {tip, stakeWeight, feeRate})
+    agent.messenger.sendToApp('blockchain-info', {tip, stakeWeight, feeRate, dgpInfo})
   })
   agent.messenger.on('stakeweight', result => {
     stakeWeight = result
