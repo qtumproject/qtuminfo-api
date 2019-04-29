@@ -22,7 +22,8 @@ module.exports = app => {
       unique: 'address'
     },
     string: STRING(64),
-    createHeight: INTEGER.UNSIGNED
+    createHeight: INTEGER.UNSIGNED,
+    createIndex: INTEGER.UNSIGNED
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
   return Address
