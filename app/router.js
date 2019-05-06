@@ -97,6 +97,11 @@ module.exports = app => {
     controller.contract.qrc20BalanceHistory
   )
   router.get(
+    '/contract/:contract/call',
+    contractMiddleware,
+    controller.contract.callContract
+  )
+  router.get(
     '/searchlogs',
     paginationMiddleware,
     controller.contract.searchLogs

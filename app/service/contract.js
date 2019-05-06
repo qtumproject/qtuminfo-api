@@ -186,6 +186,11 @@ class ContractService extends Service {
     return {totalCount, transactions}
   }
 
+  async callContract(contract, data, sender) {
+    let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
+    return await client.callcontract(contract.toString('hex'), data.toString('hex'))
+  }
+
   async searchLogs({fromBlock, toBlock, contract, topic1, topic2, topic3, topic4} = {}) {
     const db = this.ctx.model
     const {Header, Transaction, Receipt, ReceiptLog, Contract} = db

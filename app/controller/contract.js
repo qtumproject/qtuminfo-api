@@ -106,6 +106,14 @@ class ContractController extends Controller {
     }
   }
 
+  async callContract() {
+    let {ctx} = this
+    let data = ctx.query.data
+    ctx.assert(ctx.state.contract.vm === 'evm', 400)
+    ctx.assert(/^([0-9a-f]{2})+$/i.test(data), 400)
+    ctx.body = await ctx.service.contract.callContract(ctx.state.contract.contractAddress, data)
+  }
+
   async searchLogs() {
     let {ctx} = this
     let {fromBlock, toBlock, contract, topic1, topic2, topic3, topic4} = this.ctx.query
