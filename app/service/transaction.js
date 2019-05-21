@@ -433,6 +433,7 @@ class TransactionService extends Service {
       }]
       : transaction.inputs.map((input, index) => this.transformInput(input, index, {brief}))
     let outputs = transaction.outputs.map((output, index) => this.transformOutput(output, index, {brief}))
+    this.insertWitnesses(inputs, transaction.witnesses)
 
     let [qrc20TokenTransfers, qrc721TokenTransfers] = await Promise.all([
       this.transformQRC20Transfers(transaction.outputs),
@@ -444,7 +445,6 @@ class TransactionService extends Service {
       ...brief ? {} : {
         hash: transaction.hash.toString('hex'),
         version: transaction.version,
-        witnesses: transaction.witnesses.map(list => list.map(script => script.toString('hex'))),
         lockTime: transaction.lockTime,
         blockHash: transaction.block && transaction.block.hash.toString('hex')
       },
@@ -487,22 +487,34 @@ class TransactionService extends Service {
     for (let {inputIndex, script} of witnesses) {
       if (inputIndex !== lastInputIndex) {
         result.push([])
+        lastInputIndex = inputIndex
       }
-      result[result.length - 1].push(script)
+      result[result.length - 1].push(script.toString('hex'))
     }
     return result
   }
 
   transformInput(input, index, {brief}) {
+    const {Script} = this.app.qtuminfo.lib
+    let scriptSig = Script.fromBuffer(input.scriptSig, {isInput: true})
+    let type = {
+      [Script.UNKNOWN]: 'nonstandard',
+      [Script.COINBASE]: 'coinbase',
+      [Script.PUBKEY_IN]: 'pubkey',
+      [Script.PUBKEYHASH_IN]: 'pubkeyhash',
+      [Script.SCRIPTHASH_IN]: 'scripthash',
+      [Script.MULTISIG_IN]: 'multisig',
+      [Script.DATA_OUT]: 'nulldata',
+      [Script.WITNESS_IN]: 'witness'
+    }[scriptSig.type]
     return {
       prevTxId: input.prevTxId.toString('hex'),
       value: input.value.toString(),
       address: input.address,
       addressHex: input.addressHex && input.addressHex.toString('hex'),
-      ...brief ? {} : {
+      ...brief ? {scriptSig: {type}} : {
         outputIndex: input.outputIndex,
         sequence: input.sequence,
-        index,
         scriptSig: {
           hex: input.scriptSig.toString('hex'),
           asm: this.app.qtuminfo.lib.Script.fromBuffer(
@@ -559,6 +571,21 @@ class TransactionService extends Service {
       }
     }
     return result
+  }
+
+  insertWitnesses(inputs, witnesses) {
+    let index = 0
+    if (inputs[0].coinbase) {
+      inputs[0].witness = witnesses[0] || []
+      return
+    }
+    for (let input of inputs) {
+      if (input.scriptSig.type === 'witness') {
+        input.witness = witnesses[index++]
+      } else {
+        input.witness = []
+      }
+    }
   }
 
   async transformQRC20Transfers(outputs) {
