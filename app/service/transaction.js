@@ -516,6 +516,7 @@ class TransactionService extends Service {
         outputIndex: input.outputIndex,
         sequence: input.sequence,
         scriptSig: {
+          type,
           hex: input.scriptSig.toString('hex'),
           asm: this.app.qtuminfo.lib.Script.fromBuffer(
             input.scriptSig,
