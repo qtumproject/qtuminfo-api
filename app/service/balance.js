@@ -272,7 +272,7 @@ class BalanceService extends Service {
 
   async updateRichList() {
     const db = this.ctx.model
-    const {RichList} = db
+    const {Address, RichList} = db
     const {sql} = this.ctx.helper
     let transaction = await db.transaction()
     try {
@@ -290,7 +290,7 @@ class BalanceService extends Service {
           GROUP BY address_id
         ) list
         INNER JOIN address ON address._id = list.address_id
-        WHERE address.type NOT IN ('contract', 'evm_contract')
+        WHERE address.type < ${Address.parseType('contract')}
       `, {transaction})
       await db.query(sql`DELETE FROM rich_list`, {transaction})
       await RichList.bulkCreate(

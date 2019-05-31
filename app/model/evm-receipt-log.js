@@ -1,7 +1,7 @@
 module.exports = app => {
   const {INTEGER, BIGINT, CHAR, STRING, BLOB} = app.Sequelize
 
-  let ReceiptLog = app.model.define('receipt_log', {
+  let EVMReceiptLog = app.model.define('evm_receipt_log', {
     _id: {
       type: BIGINT.UNSIGNED,
       field: '_id',
@@ -30,11 +30,11 @@ module.exports = app => {
     data: BLOB
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
-  ReceiptLog.associate = () => {
-    const {Receipt} = app.model
-    Receipt.hasMany(ReceiptLog, {as: 'logs', foreignKey: 'receiptId'})
-    ReceiptLog.belongsTo(Receipt, {as: 'receipt', foreignKey: 'receiptId'})
+  EVMReceiptLog.associate = () => {
+    const {EvmReceipt: EVMReceipt} = app.model
+    EVMReceipt.hasMany(EVMReceiptLog, {as: 'logs', foreignKey: 'receiptId'})
+    EVMReceiptLog.belongsTo(EVMReceipt, {as: 'receipt', foreignKey: 'receiptId'})
   }
 
-  return ReceiptLog
+  return EVMReceiptLog
 }

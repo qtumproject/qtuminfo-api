@@ -272,7 +272,7 @@ class BlockService extends Service {
   }
 
   async getBlockAddressTransactions(height) {
-    const {Address, Transaction, BalanceChange, Receipt, ReceiptLog, Contract} = this.ctx.model
+    const {Address, Transaction, BalanceChange, EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, Contract} = this.ctx.model
     const {Address: RawAddress} = this.app.qtuminfo.lib
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     let result = []
@@ -298,11 +298,11 @@ class BlockService extends Service {
       result[transaction.indexInBlock] = result[transaction.indexInBlock] || new Set()
       result[transaction.indexInBlock].add(address.string)
     }
-    let receiptLogs = await ReceiptLog.findAll({
+    let receiptLogs = await EVMReceiptLog.findAll({
       attributes: ['topic1', 'topic2', 'topic3', 'topic4'],
       include: [
         {
-          model: Receipt,
+          model: EVMReceipt,
           as: 'receipt',
           required: true,
           where: {blockHeight: height},

@@ -87,38 +87,43 @@ class QRC20Service extends Service {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
     const {sql, sqlRaw} = this.ctx.helper
-    const {Header, Transaction, Receipt, ReceiptLog, Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance, literal} = db
+    const {
+      Header, Transaction,
+      EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog,
+      Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance,
+      literal
+    } = db
     const {ne: $ne, and: $and, or: $or, in: $in} = this.app.Sequelize.Op
     let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
     let logFilter = [
-      ...tokens ? [sql`receipt_log.address IN ${tokens}`] : [],
-      sql`receipt_log.topic1 = ${TransferABI.id}`,
-      'receipt_log.topic3 IS NOT NULL',
-      'receipt_log.topic4 IS NULL',
-      sql`(receipt_log.topic2 IN ${topicAddresses} OR receipt_log.topic3 IN ${topicAddresses})`
+      ...tokens ? [sql`log.address IN ${tokens}`] : [],
+      sql`log.topic1 = ${TransferABI.id}`,
+      'log.topic3 IS NOT NULL',
+      'log.topic4 IS NULL',
+      sql`(log.topic2 IN ${topicAddresses} OR log.topic3 IN ${topicAddresses})`
     ].join(' AND ')
 
     let result = await db.query(sqlRaw`
       SELECT COUNT(DISTINCT(receipt.transaction_id)) AS totalCount
-      FROM receipt, receipt_log, qrc20
-      WHERE receipt._id = receipt_log.receipt_id AND receipt_log.address = qrc20.contract_address AND ${logFilter}
+      FROM evm_receipt receipt, evm_receipt_log log, qrc20
+      WHERE receipt._id = log.receipt_id AND log.address = qrc20.contract_address AND ${logFilter}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     let totalCount = result[0].totalCount || 0
     if (totalCount === 0) {
       return {totalCount: 0, transactions: []}
     }
     let ids = (await db.query(sqlRaw`
-      SELECT transaction_id AS id FROM receipt
+      SELECT transaction_id AS id FROM evm_receipt receipt
       INNER JOIN (
-        SELECT DISTINCT(receipt.transaction_id) AS id FROM receipt, receipt_log, qrc20
-        WHERE receipt._id = receipt_log.receipt_id AND receipt_log.address = qrc20.contract_address AND ${logFilter}
+        SELECT DISTINCT(receipt.transaction_id) AS id FROM evm_receipt receipt, evm_receipt_log log, qrc20
+        WHERE receipt._id = log.receipt_id AND log.address = qrc20.contract_address AND ${logFilter}
       ) list ON list.id = receipt.transaction_id
       ORDER BY receipt.block_height ${order}, receipt.index_in_block ${order}
       LIMIT ${offset}, ${limit}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({id}) => id)
 
-    let list = await Receipt.findAll({
+    let list = await EVMReceipt.findAll({
       where: {transactionId: {[$in]: ids}},
       attributes: ['blockHeight', 'indexInBlock'],
       include: [
@@ -135,7 +140,7 @@ class QRC20Service extends Service {
           attributes: ['id']
         },
         {
-          model: ReceiptLog,
+          model: EVMReceiptLog,
           as: 'logs',
           required: true,
           where: {
@@ -193,7 +198,7 @@ class QRC20Service extends Service {
         initialBalanceMap.set(address, (initialBalanceMap.get(address) || 0n) + balance)
       }
       let {blockHeight, indexInBlock} = list[0]
-      let latestLogs = await ReceiptLog.findAll({
+      let latestLogs = await EVMReceiptLog.findAll({
         where: {
           ...tokens ? {address: {[$in]: tokens}} : {},
           topic1: TransferABI.id,
@@ -207,7 +212,7 @@ class QRC20Service extends Service {
         attributes: ['address', 'topic2', 'topic3', 'data'],
         include: [
           {
-            model: Receipt,
+            model: EVMReceipt,
             as: 'receipt',
             required: true,
             where: {

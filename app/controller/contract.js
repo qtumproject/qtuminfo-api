@@ -11,9 +11,6 @@ class ContractController extends Controller {
       addressHex: summary.addressHex.toString('hex'),
       vm: summary.vm,
       type: summary.type,
-      owner: summary.owner,
-      createTxId: summary.createTxId && summary.createTxId.toString('hex'),
-      createHeight: summary.createHeight,
       ...summary.type === 'qrc20' ? {
         qrc20: {
           name: summary.qrc20.name,

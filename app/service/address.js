@@ -50,14 +50,17 @@ class AddressService extends Service {
       SELECT COUNT(*) AS count FROM (
         SELECT transaction_id FROM balance_change WHERE address_id IN ${addressIds}
         UNION
-        SELECT receipt.transaction_id AS transaction_id FROM receipt, receipt_log, contract
-        WHERE receipt._id = receipt_log.receipt_id
-          AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
-          AND receipt_log.topic1 = ${TransferABI.id}
-          AND (receipt_log.topic2 IN ${topics} OR receipt_log.topic3 IN ${topics})
+        SELECT transaction_id AS transaction_id FROM evm_receipt
+        WHERE sender_type = 1 AND sender_data IN ${hexAddresses}
+        UNION
+        SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log, contract
+        WHERE receipt._id = log.receipt_id
+          AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
+          AND log.topic1 = ${TransferABI.id}
+          AND (log.topic2 IN ${topics} OR log.topic3 IN ${topics})
           AND (
-            (contract.type = 'qrc20' AND receipt_log.topic3 IS NOT NULL AND receipt_log.topic4 IS NULL)
-            OR (contract.type = 'qrc721' AND receipt_log.topic4 IS NOT NULL)
+            (contract.type = 'qrc20' AND log.topic3 IS NOT NULL AND log.topic4 IS NULL)
+            OR (contract.type = 'qrc721' AND log.topic4 IS NOT NULL)
           )
       ) list
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
@@ -78,15 +81,19 @@ class AddressService extends Service {
           SELECT block_height, index_in_block, transaction_id AS _id FROM balance_change
           WHERE address_id IN ${addressIds}
           UNION
+          SELECT block_height AS block_height, index_in_block AS index_in_block, transaction_id AS _id
+          FROM evm_receipt
+          WHERE sender_type = 1 AND sender_data IN ${hexAddresses}
+          UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
-          FROM receipt, receipt_log, contract
-          WHERE receipt._id = receipt_log.receipt_id
-            AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
-            AND receipt_log.topic1 = ${TransferABI.id}
-            AND (receipt_log.topic2 IN ${topics} OR receipt_log.topic3 IN ${topics})
+          FROM evm_receipt receipt, evm_receipt_log log, contract
+          WHERE receipt._id = log.receipt_id
+            AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
+            AND log.topic1 = ${TransferABI.id}
+            AND (log.topic2 IN ${topics} OR log.topic3 IN ${topics})
             AND (
-              (contract.type = 'qrc20' AND receipt_log.topic3 IS NOT NULL AND receipt_log.topic4 IS NULL)
-              OR (contract.type = 'qrc721' AND receipt_log.topic4 IS NOT NULL)
+              (contract.type = 'qrc20' AND log.topic3 IS NOT NULL AND log.topic4 IS NULL)
+              OR (contract.type = 'qrc721' AND log.topic4 IS NOT NULL)
             )
         ) list
         ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, _id ${{raw: order}}

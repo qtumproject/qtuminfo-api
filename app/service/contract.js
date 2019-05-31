@@ -34,12 +34,12 @@ class ContractService extends Service {
   }
 
   async getContractSummary(contractAddress, addressIds) {
-    const {Address, Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance, Qrc721: QRC721} = this.ctx.model
+    const {Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance, Qrc721: QRC721} = this.ctx.model
     const {balance: balanceService, qrc20: qrc20Service, qrc721: qrc721Service} = this.ctx.service
     const {ne: $ne} = this.app.Sequelize.Op
     let contract = await Contract.findOne({
       where: {address: contractAddress},
-      attributes: ['addressString', 'vm', 'type', 'createTxId', 'createHeight'],
+      attributes: ['addressString', 'vm', 'type'],
       include: [
         {
           model: QRC20,
@@ -52,12 +52,6 @@ class ContractService extends Service {
           as: 'qrc721',
           required: false,
           attributes: ['name', 'symbol', 'totalSupply']
-        },
-        {
-          model: Address,
-          as: 'owner',
-          required: false,
-          attributes: ['string']
         }
       ],
       transaction: this.ctx.state.transaction
@@ -90,9 +84,6 @@ class ContractService extends Service {
       addressHex: contractAddress,
       vm: contract.vm,
       type: contract.type,
-      owner: contract.owner && contract.owner.string,
-      createTxId: contract.createTxId,
-      createHeight: contract.createHeight,
       ...contract.type === 'qrc20' ? {
         qrc20: {
           name: contract.qrc20.name,
@@ -129,19 +120,19 @@ class ContractService extends Service {
       SELECT COUNT(*) AS count FROM (
         SELECT transaction_id FROM balance_change WHERE address_id IN ${addressIds}
         UNION
-        SELECT transaction_id FROM receipt WHERE contract_address = ${contractAddress}
+        SELECT transaction_id FROM evm_receipt WHERE contract_address = ${contractAddress}
         UNION
-        SELECT receipt.transaction_id AS transaction_id FROM receipt, receipt_log
-        WHERE receipt_log.receipt_id = receipt._id AND receipt_log.address = ${contractAddress}
+        SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log
+        WHERE log.receipt_id = receipt._id AND log.address = ${contractAddress}
         UNION
-        SELECT receipt.transaction_id AS transaction_id FROM receipt, receipt_log, contract
-        WHERE receipt_log.receipt_id = receipt._id
-          AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
-          AND receipt_log.topic1 = ${TransferABI.id}
-          AND (receipt_log.topic2 = ${topic} OR receipt_log.topic3 = ${topic})
+        SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log, contract
+        WHERE log.receipt_id = receipt._id
+          AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
+          AND log.topic1 = ${TransferABI.id}
+          AND (log.topic2 = ${topic} OR log.topic3 = ${topic})
           AND (
-            (contract.type = 'qrc20' AND receipt_log.topic3 IS NOT NULL AND receipt_log.topic4 IS NULL)
-            OR (contract.type = 'qrc721' AND receipt_log.topic4 IS NOT NULL)
+            (contract.type = 'qrc20' AND log.topic3 IS NOT NULL AND log.topic4 IS NULL)
+            OR (contract.type = 'qrc721' AND log.topic4 IS NOT NULL)
           )
       ) list
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
@@ -161,21 +152,21 @@ class ContractService extends Service {
         SELECT _id FROM (
           SELECT block_height, index_in_block, transaction_id AS _id FROM balance_change WHERE address_id IN ${addressIds}
           UNION
-          SELECT block_height, index_in_block, transaction_id AS _id FROM receipt WHERE contract_address = ${contractAddress}
+          SELECT block_height, index_in_block, transaction_id AS _id FROM evm_receipt WHERE contract_address = ${contractAddress}
           UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
-          FROM receipt, receipt_log
-          WHERE receipt_log.receipt_id = receipt._id AND receipt_log.address = ${contractAddress}
+          FROM evm_receipt receipt, evm_receipt_log log
+          WHERE log.receipt_id = receipt._id AND log.address = ${contractAddress}
           UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
-          FROM receipt, receipt_log, contract
-          WHERE receipt_log.receipt_id = receipt._id
-            AND contract.address = receipt_log.address AND contract.type IN ('qrc20', 'qrc721')
-            AND receipt_log.topic1 = ${TransferABI.id}
-            AND (receipt_log.topic2 = ${topic} OR receipt_log.topic3 = ${topic})
+          FROM evm_receipt receipt, evm_receipt_log log, contract
+          WHERE log.receipt_id = receipt._id
+            AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
+            AND log.topic1 = ${TransferABI.id}
+            AND (log.topic2 = ${topic} OR log.topic3 = ${topic})
             AND (
-              (contract.type = 'qrc20' AND receipt_log.topic3 IS NOT NULL AND receipt_log.topic4 IS NULL)
-              OR (contract.type = 'qrc721' AND receipt_log.topic4 IS NOT NULL)
+              (contract.type = 'qrc20' AND log.topic3 IS NOT NULL AND log.topic4 IS NULL)
+              OR (contract.type = 'qrc721' AND log.topic4 IS NOT NULL)
             )
         ) list
         ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, _id ${{raw: order}}
@@ -193,14 +184,14 @@ class ContractService extends Service {
 
   async searchLogs({fromBlock, toBlock, contract, topic1, topic2, topic3, topic4} = {}) {
     const db = this.ctx.model
-    const {Header, Transaction, Receipt, ReceiptLog, Contract} = db
+    const {Header, Transaction, EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, Contract} = db
     const {in: $in, gte: $gte, lte: $lte, between: $between} = this.ctx.app.Sequelize.Op
     const {sql} = this.ctx.helper
     let {limit, offset} = this.ctx.state.pagination
     let idFilter = {}
     if (fromBlock != null && toBlock != null) {
       let idResult = await db.query(sql`
-        SELECT MIN(_id) AS min, MAX(_id) AS max FROM receipt
+        SELECT MIN(_id) AS min, MAX(_id) AS max FROM evm_receipt
         WHERE block_height BETWEEN ${fromBlock} AND ${toBlock}
       `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
       if (idResult.length === 0) {
@@ -209,7 +200,7 @@ class ContractService extends Service {
       idFilter.receiptId = {[$between]: [idResult[0].min, idResult[0].max]}
     } else if (fromBlock != null) {
       let idResult = await db.query(sql`
-        SELECT MIN(_id) AS min FROM receipt
+        SELECT MIN(_id) AS min FROM evm_receipt
         WHERE block_height >= ${fromBlock}
       `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
       if (idResult.length === 0) {
@@ -218,7 +209,7 @@ class ContractService extends Service {
       idFilter.receiptId = {[$gte]: [idResult[0].min]}
     } else if (toBlock != null) {
       let idResult = await db.query(sql`
-        SELECT MAX(_id) AS max FROM receipt
+        SELECT MAX(_id) AS max FROM evm_receipt
         WHERE block_height <= ${toBlock}
       `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
       if (idResult.length === 0) {
@@ -227,12 +218,7 @@ class ContractService extends Service {
       idFilter.receiptId = {[$lte]: [idResult[0].max]}
     }
 
-    await Receipt.findAll({
-      attributes: ['_id'],
-      limit: 10
-    })
-
-    let totalCount = await ReceiptLog.count({
+    let totalCount = await EVMReceiptLog.count({
       where: {
         ...idFilter,
         ...contract ? {address: contract} : {},
@@ -243,7 +229,7 @@ class ContractService extends Service {
       },
       transaction: this.ctx.state.transaction
     })
-    let ids = await ReceiptLog.findAll({
+    let ids = await EVMReceiptLog.findAll({
       where: {
         ...idFilter,
         ...contract ? {address: contract} : {},
@@ -258,12 +244,12 @@ class ContractService extends Service {
       offset,
       transaction: this.ctx.state.transaction
     })
-    let logs = await ReceiptLog.findAll({
+    let logs = await EVMReceiptLog.findAll({
       where: {_id: {[$in]: ids.map(item => item._id)}},
       attributes: ['topic1', 'topic2', 'topic3', 'topic4', 'data'],
       include: [
         {
-          model: Receipt,
+          model: EVMReceipt,
           as: 'receipt',
           required: true,
           attributes: ['transactionId', 'blockHeight'],

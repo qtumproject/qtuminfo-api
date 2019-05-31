@@ -40,9 +40,9 @@ module.exports = app => {
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
   QRC721.associate = () => {
-    const {ReceiptLog, Contract} = app.model
-    ReceiptLog.belongsTo(QRC721, {as: 'qrc721', foreignKey: 'address', sourceKey: 'contractAddress'})
-    QRC721.hasOne(ReceiptLog, {as: 'eventLogs', foreignKey: 'address', sourceKey: 'contractAddress'})
+    const {EvmReceiptLog: EVMReceiptLog, Contract} = app.model
+    EVMReceiptLog.belongsTo(QRC721, {as: 'qrc721', foreignKey: 'address', sourceKey: 'contractAddress'})
+    QRC721.hasOne(EVMReceiptLog, {as: 'logs', foreignKey: 'address', sourceKey: 'contractAddress'})
     Contract.hasOne(QRC721, {as: 'qrc721', foreignKey: 'contractAddress'})
     QRC721.belongsTo(Contract, {as: 'contract', foreignKey: 'contractAddress'})
   }

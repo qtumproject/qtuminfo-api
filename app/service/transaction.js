@@ -4,7 +4,8 @@ class TransactionService extends Service {
   async getTransaction(id) {
     const {
       Header, Address,
-      Transaction, Witness, TransactionOutput, GasRefund, Receipt, ReceiptLog, ContractSpend,
+      Transaction, Witness, TransactionOutput, GasRefund,
+      EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, ContractSpend,
       Contract, Qrc20: QRC20, Qrc721: QRC721,
       where, col
     } = this.ctx.model
@@ -102,11 +103,11 @@ class TransactionService extends Service {
           attributes: ['transactionId', 'outputIndex']
         },
         {
-          model: Receipt,
-          as: 'receipt',
+          model: EVMReceipt,
+          as: 'evmReceipt',
           on: {
-            transactionId: where(col('receipt.transaction_id'), '=', transaction._id),
-            outputIndex: where(col('receipt.output_index'), '=', col('transaction_output.output_index'))
+            transactionId: where(col('evmReceipt.transaction_id'), '=', transaction._id),
+            outputIndex: where(col('evmReceipt.output_index'), '=', col('transaction_output.output_index'))
           },
           required: false,
           include: [{
@@ -124,9 +125,9 @@ class TransactionService extends Service {
     let eventLogs = []
     let contractSpends = []
 
-    if (outputs.some(output => output.receipt)) {
-      eventLogs = await ReceiptLog.findAll({
-        where: {receiptId: {[$in]: outputs.filter(output => output.receipt).map(output => output.receipt._id)}},
+    if (outputs.some(output => output.evmReceipt)) {
+      eventLogs = await EVMReceiptLog.findAll({
+        where: {receiptId: {[$in]: outputs.filter(output => output.evmReceipt).map(output => output.evmReceipt._id)}},
         include: [
           {
             model: Contract,
@@ -267,13 +268,18 @@ class TransactionService extends Service {
           outputObject.refundValue = output.refund.refundTo.value
         }
         outputObject.isRefund = Boolean(output.refundTo)
-        if (output.receipt) {
-          outputObject.receipt = {
-            gasUsed: output.receipt.gasUsed,
-            contractAddress: output.receipt.contract.addressString,
-            contractAddressHex: output.receipt.contractAddress,
-            excepted: output.receipt.excepted,
-            logs: eventLogs.filter(log => log.receiptId === output.receipt._id).map(log => ({
+        if (output.evmReceipt) {
+          outputObject.evmReceipt = {
+            sender: new RawAddress({
+              type: output.evmReceipt.senderType,
+              data: output.evmReceipt.senderData,
+              chain: this.app.chain
+            }).toString(),
+            gasUsed: output.evmReceipt.gasUsed,
+            contractAddress: output.evmReceipt.contract.addressString,
+            contractAddressHex: output.evmReceipt.contractAddress,
+            excepted: output.evmReceipt.excepted,
+            logs: eventLogs.filter(log => log.receiptId === output.evmReceipt._id).map(log => ({
               address: log.contract.addressString,
               addressHex: log.address,
               topics: this.transformTopics(log),
@@ -557,13 +563,14 @@ class TransactionService extends Service {
       result.spentTxId = output.spentTxId.toString('hex')
       result.spentIndex = output.spentIndex
     }
-    if (output.receipt) {
+    if (output.evmReceipt) {
       result.receipt = {
-        gasUsed: output.receipt.gasUsed,
-        contractAddress: output.receipt.contractAddress,
-        contractAddressHex: output.receipt.contractAddressHex.toString('hex'),
-        excepted: output.receipt.excepted,
-        logs: output.receipt.logs.map(log => ({
+        sender: output.evmReceipt.sender,
+        gasUsed: output.evmReceipt.gasUsed,
+        contractAddress: output.evmReceipt.contractAddress,
+        contractAddressHex: output.evmReceipt.contractAddressHex.toString('hex'),
+        excepted: output.evmReceipt.excepted,
+        logs: output.evmReceipt.logs.map(log => ({
           address: log.address,
           addressHex: log.addressHex.toString('hex'),
           topics: log.topics.map(topic => topic.toString('hex')),
@@ -593,8 +600,8 @@ class TransactionService extends Service {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     let result = []
     for (let output of outputs) {
-      if (output.receipt) {
-        for (let {address, addressHex, topics, data, qrc20} of output.receipt.logs) {
+      if (output.evmReceipt) {
+        for (let {address, addressHex, topics, data, qrc20} of output.evmReceipt.logs) {
           if (qrc20 && topics.length === 3 && Buffer.compare(topics[0], TransferABI.id) === 0 && data.length === 32) {
             let [from, to] = await this.ctx.service.contract.transformHexAddresses([topics[1].slice(12), topics[2].slice(12)])
             result.push({
@@ -618,8 +625,8 @@ class TransactionService extends Service {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     let result = []
     for (let output of outputs) {
-      if (output.receipt) {
-        for (let {address, addressHex, topics, qrc721} of output.receipt.logs) {
+      if (output.evmReceipt) {
+        for (let {address, addressHex, topics, qrc721} of output.evmReceipt.logs) {
           if (qrc721 && topics.length === 4 && Buffer.compare(topics[0], TransferABI.id) === 0) {
             let [from, to] = await this.ctx.service.contract.transformHexAddresses([topics[1].slice(12), topics[2].slice(12)])
             result.push({
