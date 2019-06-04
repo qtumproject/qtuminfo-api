@@ -489,7 +489,7 @@ class TransactionService extends Service {
         result.push([])
         lastInputIndex = inputIndex
       }
-      result[result.length - 1].push(script.toString('hex'))
+      result[result.length - 1].push(script)
     }
     return result
   }
@@ -577,12 +577,12 @@ class TransactionService extends Service {
   insertWitnesses(inputs, witnesses) {
     let index = 0
     if (inputs[0].coinbase) {
-      inputs[0].witness = witnesses[0] || []
+      inputs[0].witness = (witnesses[0] || []).map(script => script.toString('hex'))
       return
     }
     for (let input of inputs) {
       if (input.scriptSig.type === 'witness') {
-        input.witness = witnesses[index++]
+        input.witness = witnesses[index++].map(script => script.toString('hex'))
       } else {
         input.witness = []
       }
