@@ -320,7 +320,7 @@ class TransactionService extends Service {
 
   async getRawTransaction(id) {
     const {Transaction, Witness, TransactionOutput} = this.ctx.model
-    const {Transaction: RawTransaction, Input, Output, Script} = this.app.qtuminfo.lib
+    const {Transaction: RawTransaction, Input, Output, InputScript, OutputScript} = this.app.qtuminfo.lib
 
     let transaction = await Transaction.findOne({
       where: {id},
@@ -356,12 +356,12 @@ class TransactionService extends Service {
       inputs: inputs.map(input => new Input({
         prevTxId: input.outputTxId || Buffer.alloc(32),
         outputIndex: input.outputIndex == null ? 0xffffffff : input.outputIndex,
-        scriptSig: Script.fromBuffer(input.scriptSig, {isCoinbase: this.outputIndex == null, isInput: true}),
+        scriptSig: InputScript.fromBuffer(input.scriptSig, {isCoinbase: this.outputIndex == null}),
         sequence: input.sequence
       })),
       outputs: outputs.map(output => new Output({
         value: output.value,
-        scriptPubKey: Script.fromBuffer(output.scriptPubKey, {isOutput: true})
+        scriptPubKey: OutputScript.fromBuffer(output.scriptPubKey)
       })),
       witnesses: this.transformWitnesses(witnesses),
       lockTime: transaction.lockTime
@@ -501,17 +501,17 @@ class TransactionService extends Service {
   }
 
   transformInput(input, index, {brief}) {
-    const {Script} = this.app.qtuminfo.lib
-    let scriptSig = Script.fromBuffer(input.scriptSig, {isInput: true})
+    const {InputScript} = this.app.qtuminfo.lib
+    let scriptSig = InputScript.fromBuffer(input.scriptSig)
     let type = {
-      [Script.UNKNOWN]: 'nonstandard',
-      [Script.COINBASE]: 'coinbase',
-      [Script.PUBKEY_IN]: 'pubkey',
-      [Script.PUBKEYHASH_IN]: 'pubkeyhash',
-      [Script.SCRIPTHASH_IN]: 'scripthash',
-      [Script.MULTISIG_IN]: 'multisig',
-      [Script.DATA_OUT]: 'nulldata',
-      [Script.WITNESS_IN]: 'witness'
+      [InputScript.UNKNOWN]: 'nonstandard',
+      [InputScript.COINBASE]: 'coinbase',
+      [InputScript.PUBKEY_IN]: 'pubkey',
+      [InputScript.PUBKEYHASH_IN]: 'pubkeyhash',
+      [InputScript.SCRIPTHASH_IN]: 'scripthash',
+      [InputScript.MULTISIG_IN]: 'multisig',
+      [InputScript.DATA_OUT]: 'nulldata',
+      [InputScript.WITNESS_IN]: 'witness'
     }[scriptSig.type]
     return {
       prevTxId: input.prevTxId.toString('hex'),
@@ -524,30 +524,27 @@ class TransactionService extends Service {
         scriptSig: {
           type,
           hex: input.scriptSig.toString('hex'),
-          asm: this.app.qtuminfo.lib.Script.fromBuffer(
-            input.scriptSig,
-            {isCoinbase: this.isCoinbase(input), isInput: true}
-          ).toString()
+          asm: scriptSig.toString()
         }
       }
     }
   }
 
   transformOutput(output, index, {brief}) {
-    const {Script} = this.app.qtuminfo.lib
-    let scriptPubKey = Script.fromBuffer(output.scriptPubKey, {isOutput: true})
+    const {OutputScript} = this.app.qtuminfo.lib
+    let scriptPubKey = OutputScript.fromBuffer(output.scriptPubKey)
     let type = {
-      [Script.UNKNOWN]: 'nonstandard',
-      [Script.PUBKEY_OUT]: 'pubkey',
-      [Script.PUBKEYHASH_OUT]: 'pubkeyhash',
-      [Script.SCRIPT_OUT]: 'scripthash',
-      [Script.MULTISIG_OUT]: 'multisig',
-      [Script.DATA_OUT]: 'nulldata',
-      [Script.WITNESS_V0_KEYHASH]: 'witness_v0_keyhash',
-      [Script.WITNESS_V0_SCRIPTHASH]: 'witness_v0_scripthash',
-      [Script.EVM_CONTRACT_CREATE]: 'create',
-      [Script.EVM_CONTRACT_CALL]: 'call',
-      [Script.CONTRACT_OUT]: 'call',
+      [OutputScript.UNKNOWN]: 'nonstandard',
+      [OutputScript.PUBKEY_OUT]: 'pubkey',
+      [OutputScript.PUBKEYHASH_OUT]: 'pubkeyhash',
+      [OutputScript.SCRIPT_OUT]: 'scripthash',
+      [OutputScript.MULTISIG_OUT]: 'multisig',
+      [OutputScript.DATA_OUT]: 'nulldata',
+      [OutputScript.WITNESS_V0_KEYHASH]: 'witness_v0_keyhash',
+      [OutputScript.WITNESS_V0_SCRIPTHASH]: 'witness_v0_scripthash',
+      [OutputScript.EVM_CONTRACT_CREATE]: 'create',
+      [OutputScript.EVM_CONTRACT_CALL]: 'call',
+      [OutputScript.CONTRACT_OUT]: 'call',
     }[scriptPubKey.type]
     let result = {
       value: output.value.toString(),
