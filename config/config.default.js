@@ -9,6 +9,10 @@ exports.security = {
 
 exports.middleware = ['cors', 'ratelimit']
 
+exports.cors = {
+  origins: ['*']
+}
+
 exports.ratelimit = {
   db: new Redis({
     host: 'localhost',
@@ -21,7 +25,7 @@ exports.ratelimit = {
     total: 'Rate-Limit-Total',
   },
   disableHeader: false,
-  id: ctx => `qtuminfo-api-mainnet-${ctx.get('x-forwarded-for') || ctx.ip}`,
+  idPrefix: 'qtuminfo-api-mainnet-',
   errorMessage: 'Rate Limit Exceeded',
   duration: 10 * 60 * 1000,
   max: 10 * 60
