@@ -10,11 +10,13 @@ module.exports = app => {
     outputTxId: {
       type: STRING(32).BINARY,
       field: 'output_transaction_id',
-      primaryKey: true
+      allowNull: true,
+      unique: true
     },
     outputIndex: {
       type: INTEGER.UNSIGNED,
-      primaryKey: true
+      allowNull: true,
+      unique: true
     },
     scriptPubKey: {
       type: BLOB('medium'),
