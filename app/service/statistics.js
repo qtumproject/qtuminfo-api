@@ -37,10 +37,11 @@ class StatisticsService extends Service {
 
   async getAddressGrowth() {
     const db = this.ctx.model
+    const {Address} = db
     const {sql} = this.ctx.helper
     let result = await db.query(sql`
       SELECT FLOOR(header.timestamp / 86400) AS date, COUNT(*) AS count FROM address, header
-      WHERE address.create_height = header.height AND address.type NOT IN ('contract', 'evm_contract')
+      WHERE address.create_height = header.height AND address.type < ${Address.parseType('contract')}
       GROUP BY date
       ORDER BY date ASC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})

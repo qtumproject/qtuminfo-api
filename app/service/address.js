@@ -44,6 +44,7 @@ class AddressService extends Service {
   async getAddressTransactionCount(addressIds, hexAddresses) {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
+    const {Address} = db
     const {sql} = this.ctx.helper
     let topics = hexAddresses.map(address => Buffer.concat([Buffer.alloc(12), address]))
     let [{count}] = await db.query(sql`
@@ -51,7 +52,7 @@ class AddressService extends Service {
         SELECT transaction_id FROM balance_change WHERE address_id IN ${addressIds}
         UNION
         SELECT transaction_id AS transaction_id FROM evm_receipt
-        WHERE sender_type = 1 AND sender_data IN ${hexAddresses}
+        WHERE sender_type = ${Address.parseType('pubkeyhash')} AND sender_data IN ${hexAddresses}
         UNION
         SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log, contract
         WHERE receipt._id = log.receipt_id
@@ -70,6 +71,7 @@ class AddressService extends Service {
   async getAddressTransactions(addressIds, hexAddresses) {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
+    const {Address} = db
     const {sql} = this.ctx.helper
     let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
@@ -81,9 +83,9 @@ class AddressService extends Service {
           SELECT block_height, index_in_block, transaction_id AS _id FROM balance_change
           WHERE address_id IN ${addressIds}
           UNION
-          SELECT block_height AS block_height, index_in_block AS index_in_block, transaction_id AS _id
+          SELECT block_height, index_in_block, transaction_id AS _id
           FROM evm_receipt
-          WHERE sender_type = 1 AND sender_data IN ${hexAddresses}
+          WHERE sender_type = ${Address.parseType('pubkeyhash')} AND sender_data IN ${hexAddresses}
           UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
           FROM evm_receipt receipt, evm_receipt_log log, contract

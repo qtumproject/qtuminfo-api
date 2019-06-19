@@ -3,7 +3,7 @@ module.exports = () => async function contract(ctx, next) {
   const {Address: RawAddress} = ctx.app.qtuminfo.lib
   const chain = ctx.app.chain
   const {Address, Contract} = ctx.model
-  const {in: $in} = ctx.app.Sequelize.Op
+  const {gte: $gte} = ctx.app.Sequelize.Op
 
   let contract = {}
   let rawAddress
@@ -33,7 +33,7 @@ module.exports = () => async function contract(ctx, next) {
 
   let addressList = await Address.findAll({
     where: {
-      type: {[$in]: ['contract', 'evm_contract']},
+      type: {[$gte]: Address.parseType('contract')},
       data: contract.contractAddress
     },
     attributes: ['_id'],
