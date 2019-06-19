@@ -1,7 +1,7 @@
 const path = require('path')
 const Redis = require('ioredis')
 
-exports.keys = 'qtuminfo-api-mainnet'
+exports.keys = 'qtuminfo-api'
 
 exports.security = {
   csrf: {enable: false}
@@ -25,7 +25,7 @@ exports.ratelimit = {
     total: 'Rate-Limit-Total',
   },
   disableHeader: false,
-  idPrefix: 'qtuminfo-api-mainnet-',
+  idPrefix: 'qtuminfo-api-',
   errorMessage: 'Rate Limit Exceeded',
   duration: 10 * 60 * 1000,
   max: 10 * 60
