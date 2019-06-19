@@ -10,8 +10,8 @@ module.exports = {
   },
   get qtuminfo() {
     return {
-      lib: _require(path.resolve(this.config.qtuminfo.path, 'packages', 'qtuminfo-lib')),
-      rpc: _require(path.resolve(this.config.qtuminfo.path, 'packages', 'qtuminfo-rpc')).default
+      lib: _require(path.resolve(this.config.qtuminfo.path, 'lib')),
+      rpc: _require(path.resolve(this.config.qtuminfo.path, 'rpc')).default
     }
   }
 }

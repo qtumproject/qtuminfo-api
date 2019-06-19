@@ -43,7 +43,6 @@ exports.io = {
 }
 
 exports.sequelize = {
-  Sequelize: require('sequelize'),
   dialect: 'mysql',
   database: 'qtum_mainnet',
   host: 'localhost',
