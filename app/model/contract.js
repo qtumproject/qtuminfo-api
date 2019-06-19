@@ -1,5 +1,5 @@
 module.exports = app => {
-  const {INTEGER, CHAR, STRING, TEXT, ENUM} = app.Sequelize
+  const {CHAR, TEXT, ENUM} = app.Sequelize
 
   let Contract = app.model.define('contract', {
     address: {

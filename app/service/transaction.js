@@ -503,54 +503,33 @@ class TransactionService extends Service {
   transformInput(input, index, {brief}) {
     const {InputScript} = this.app.qtuminfo.lib
     let scriptSig = InputScript.fromBuffer(input.scriptSig)
-    let type = {
-      [InputScript.UNKNOWN]: 'nonstandard',
-      [InputScript.COINBASE]: 'coinbase',
-      [InputScript.PUBKEY_IN]: 'pubkey',
-      [InputScript.PUBKEYHASH_IN]: 'pubkeyhash',
-      [InputScript.SCRIPTHASH_IN]: 'scripthash',
-      [InputScript.MULTISIG_IN]: 'multisig',
-      [InputScript.DATA_OUT]: 'nulldata',
-      [InputScript.WITNESS_IN]: 'witness'
-    }[scriptSig.type]
     return {
       prevTxId: input.prevTxId.toString('hex'),
       value: input.value.toString(),
       address: input.address,
       addressHex: input.addressHex && input.addressHex.toString('hex'),
-      ...brief ? {scriptSig: {type}} : {
-        outputIndex: input.outputIndex,
-        sequence: input.sequence,
-        scriptSig: {
-          type,
-          hex: input.scriptSig.toString('hex'),
-          asm: scriptSig.toString()
+      ...brief
+        ? {scriptSig: {type: scriptSig.type}}
+        : {
+          outputIndex: input.outputIndex,
+          sequence: input.sequence,
+          scriptSig: {
+            type: scriptSig.type,
+            hex: input.scriptSig.toString('hex'),
+            asm: scriptSig.toString()
+          }
         }
-      }
     }
   }
 
   transformOutput(output, index, {brief}) {
     const {OutputScript} = this.app.qtuminfo.lib
     let scriptPubKey = OutputScript.fromBuffer(output.scriptPubKey)
-    let type = {
-      [OutputScript.UNKNOWN]: 'nonstandard',
-      [OutputScript.PUBKEY_OUT]: 'pubkey',
-      [OutputScript.PUBKEYHASH_OUT]: 'pubkeyhash',
-      [OutputScript.SCRIPT_OUT]: 'scripthash',
-      [OutputScript.MULTISIG_OUT]: 'multisig',
-      [OutputScript.DATA_OUT]: 'nulldata',
-      [OutputScript.WITNESS_V0_KEYHASH]: 'witness_v0_keyhash',
-      [OutputScript.WITNESS_V0_SCRIPTHASH]: 'witness_v0_scripthash',
-      [OutputScript.EVM_CONTRACT_CREATE]: 'create',
-      [OutputScript.EVM_CONTRACT_CALL]: 'call',
-      [OutputScript.CONTRACT_OUT]: 'call',
-    }[scriptPubKey.type]
     let result = {
       value: output.value.toString(),
       address: output.address,
       addressHex: output.addressHex && output.addressHex.toString('hex'),
-      scriptPubKey: {type}
+      scriptPubKey: {type: scriptPubKey.type}
     }
     if (!brief) {
       result.scriptPubKey.hex = output.scriptPubKey.toString('hex')
