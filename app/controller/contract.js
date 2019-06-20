@@ -104,11 +104,24 @@ class ContractController extends Controller {
   }
 
   async callContract() {
+    const {Address} = this.app.qtuminfo.lib
     let {ctx} = this
-    let data = ctx.query.data
+    let {data, sender} = ctx.query
     ctx.assert(ctx.state.contract.vm === 'evm', 400)
     ctx.assert(/^([0-9a-f]{2})+$/i.test(data), 400)
-    ctx.body = await ctx.service.contract.callContract(ctx.state.contract.contractAddress, data)
+    if (sender != null) {
+      try {
+        let address = Address.fromString(sender, this.app.chain)
+        if ([Address.PAY_TO_PUBLIC_KEY_HASH, Address.CONTRACT, Address.EVM_CONTRACT].includes(address.type)) {
+          sender = address.data
+        } else {
+          ctx.throw(400)
+        }
+      } catch (err) {
+        ctx.throw(400)
+      }
+    }
+    ctx.body = await ctx.service.contract.callContract(ctx.state.contract.contractAddress, data, sender)
   }
 
   async searchLogs() {
