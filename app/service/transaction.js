@@ -202,26 +202,32 @@ class TransactionService extends Service {
         })
         for (let id of contractSpendIds) {
           contractSpends.push({
-            inputs: inputs.filter(input => Buffer.compare(input.inputTxId, id) === 0).map(input => ({
-              address: input.address && ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
-                ? input.address.contract.addressString
-                : input.address.string
-              ),
-              addressHex: input.address && [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
-                ? input.address.contract.address
-                : null,
-              value: input.value
-            })),
-            outputs: outputs.filter(output => Buffer.compare(output.outputTxId, id) === 0).map(output => ({
-              address: output.address && ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
-                ? output.address.contract.addressString
-                : output.address.string
-              ),
-              addressHex: output.address && [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
-                ? output.address.contract.address
-                : null,
-              value: output.value
-            }))
+            inputs: inputs.filter(input => Buffer.compare(input.inputTxId, id) === 0).map(input => {
+              let result = {}
+              if (input.address) {
+                result.address = [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
+                  ? input.address.contract.addressString
+                  : input.address.string
+                result.addressHex = [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
+                  ? input.address.contract.address
+                  : undefined
+              }
+              result.value = input.value
+              return result
+            }),
+            outputs: outputs.filter(output => Buffer.compare(output.outputTxId, id) === 0).map(output => {
+              let result = {}
+              if (output.address) {
+                result.address = [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
+                  ? output.address.contract.addressString
+                  : output.address.string
+                result.addressHex = [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
+                  ? output.address.contract.address
+                  : undefined
+              }
+              result.value = output.value
+              return result
+            })
           })
         }
       }
@@ -244,8 +250,9 @@ class TransactionService extends Service {
         ),
         addressHex: input.address && [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
           ? input.address.contract.address
-          : null,
-        value: input.value
+          : undefined,
+        value: input.value,
+        scriptPubKey: input.scriptPubKey
       })),
       outputs: outputs.map(output => {
         let outputObject = {
@@ -256,7 +263,7 @@ class TransactionService extends Service {
           ),
           addressHex: output.address && [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
             ? output.address.contract.address
-            : null,
+            : undefined,
           value: output.value,
         }
         if (output.inputTxId) {
@@ -356,7 +363,7 @@ class TransactionService extends Service {
       inputs: inputs.map((input, index) => new Input({
         prevTxId: input.outputTxId || Buffer.alloc(32),
         outputIndex: input.outputIndex == null ? 0xffffffff : input.outputIndex,
-        scriptSig: InputScript.fromBuffer(input.scriptSig, {isCoinbase: this.outputIndex == null}),
+        scriptSig: input.scriptSig,
         sequence: input.sequence,
         witness: witnesses.filter(({inputIndex}) => inputIndex === index).map(({script}) => script)
       })),
@@ -429,15 +436,7 @@ class TransactionService extends Service {
       .filter(output => output.isRefund)
       .map(output => output.value)
       .reduce((x, y) => x + y, 0n)
-    let inputs = this.isCoinbase(transaction.inputs[0])
-      ? [{
-        coinbase: transaction.inputs[0].scriptSig.toString('hex'),
-        ...brief ? {} : {
-          sequence: transaction.inputs[0].sequence,
-          witness: transaction.inputs[0].witness.map(script => script.toString('hex'))
-        }
-      }]
-      : transaction.inputs.map((input, index) => this.transformInput(input, index, {brief}))
+    let inputs = transaction.inputs.map((input, index) => this.transformInput(input, index, transaction, {brief}))
     let outputs = transaction.outputs.map((output, index) => this.transformOutput(output, index, {brief}))
 
     let [qrc20TokenTransfers, qrc721TokenTransfers] = await Promise.all([
@@ -466,57 +465,68 @@ class TransactionService extends Service {
       fees: (inputValue - outputValue - refundValue + refundToValue).toString(),
       ...brief ? {} : {
         size: transaction.size,
-        weight: transaction.weight
+        weight: transaction.weight,
+        contractSpendSource: transaction.contractSpendSource && transaction.contractSpendSource.toString('hex'),
+        contractSpends: transaction.contractSpends.length
+          ? transaction.contractSpends.map(({inputs, outputs}) => ({
+            inputs: inputs.map(input => ({
+              address: input.address,
+              addressHex: input.addressHex.toString('hex'),
+              value: input.value.toString()
+            })),
+            outputs: outputs.map(output => ({
+              address: output.address,
+              addressHex: output.addressHex && output.addressHex.toString('hex'),
+              value: output.value.toString()
+            }))
+          }))
+          : undefined
       },
-      contractSpendSource: transaction.contractSpendSource && transaction.contractSpendSource.toString('hex'),
-      contractSpends: transaction.contractSpends.map(({inputs, outputs}) => ({
-        inputs: inputs.map(input => ({
-          address: input.address,
-          addressHex: input.addressHex.toString('hex'),
-          value: input.value.toString()
-        })),
-        outputs: outputs.map(output => ({
-          address: output.address,
-          addressHex: output.addressHex && output.addressHex.toString('hex'),
-          value: output.value.toString()
-        }))
-      })),
       qrc20TokenTransfers,
       qrc721TokenTransfers
     }
   }
 
-  transformInput(input, index, {brief}) {
-    const {InputScript} = this.app.qtuminfo.lib
-    let scriptSig = InputScript.fromBuffer(input.scriptSig, input.witness)
-    return {
-      prevTxId: input.prevTxId.toString('hex'),
-      outputIndex: input.outputIndex,
-      value: input.value.toString(),
-      address: input.address,
-      addressHex: input.addressHex && input.addressHex.toString('hex'),
-      ...brief
-        ? {scriptSig: {type: scriptSig.type}}
-        : {
-          scriptSig: {
-            type: scriptSig.type,
-            hex: input.scriptSig.toString('hex'),
-            asm: scriptSig.toString()
-          },
-          sequence: input.sequence,
-          witness: input.witness.map(script => script.toString('hex'))
-        }
+  transformInput(input, index, transaction, {brief}) {
+    const {InputScript, OutputScript} = this.app.qtuminfo.lib
+    let scriptSig = InputScript.fromBuffer(input.scriptSig, {
+      scriptPubKey: OutputScript.fromBuffer(input.scriptPubKey),
+      witness: input.witness,
+      isCoinbase: this.isCoinbase(input)
+    })
+    let result = {}
+    if (scriptSig.type === InputScript.COINBASE) {
+      result.coinbase = scriptSig.buffer.toString('hex')
+    } else {
+      result.prevTxId = input.prevTxId.toString('hex')
+      result.outputIndex = input.outputIndex
+      result.value = input.value.toString()
+      result.address = input.address
+      result.addressHex = input.addressHex && input.addressHex.toString('hex')
+      result.scriptSig = {type: scriptSig.type}
+      if (!brief) {
+        result.scriptSig.hex = input.scriptSig.toString('hex')
+        result.scriptSig.asm = scriptSig.toString()
+      }
     }
+    if (!brief) {
+      result.sequence = input.sequence
+    }
+    if (transaction.flag) {
+      result.witness = input.witness.map(script => script.toString('hex'))
+    }
+    return result
   }
 
   transformOutput(output, index, {brief}) {
     const {OutputScript} = this.app.qtuminfo.lib
     let scriptPubKey = OutputScript.fromBuffer(output.scriptPubKey)
+    let type = scriptPubKey.isEmpty() ? 'empty' : scriptPubKey.type
     let result = {
       value: output.value.toString(),
       address: output.address,
       addressHex: output.addressHex && output.addressHex.toString('hex'),
-      scriptPubKey: {type: scriptPubKey.type}
+      scriptPubKey: {type}
     }
     if (!brief) {
       result.scriptPubKey.hex = output.scriptPubKey.toString('hex')
@@ -566,7 +576,9 @@ class TransactionService extends Service {
         }
       }
     }
-    return result
+    if (result.length) {
+      return result.length
+    }
   }
 
   async transformQRC721Transfers(outputs) {
@@ -590,7 +602,9 @@ class TransactionService extends Service {
         }
       }
     }
-    return result
+    if (result.length) {
+      return result
+    }
   }
 
   isCoinbase(input) {
