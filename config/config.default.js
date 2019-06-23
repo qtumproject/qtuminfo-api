@@ -7,11 +7,7 @@ exports.security = {
   csrf: {enable: false}
 }
 
-exports.middleware = ['cors', 'ratelimit']
-
-exports.cors = {
-  origins: ['*']
-}
+exports.middleware = ['ratelimit']
 
 exports.ratelimit = {
   db: new Redis({
