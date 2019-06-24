@@ -20,7 +20,7 @@ const addressTypeMap = {
 }
 
 module.exports = app => {
-  const {INTEGER, BIGINT, CHAR, STRING, ENUM} = app.Sequelize
+  const {INTEGER, BIGINT, CHAR, STRING, BLOB} = app.Sequelize
 
   let EVMReceipt = app.model.define('evm_receipt', {
     _id: {
@@ -54,13 +54,10 @@ module.exports = app => {
     senderData: STRING(32).BINARY,
     gasUsed: INTEGER.UNSIGNED,
     contractAddress: CHAR(20).BINARY,
-    excepted: {
-      type: ENUM,
-      values: [
-        'None', 'Unknown', 'BadRLP', 'InvalidFormat', 'OutOfGasIntrinsic', 'InvalidSignature', 'InvalidNonce',
-        'NotEnoughCash', 'OutOfGasBase', 'BlockGasLimitReached', 'BadInstruction', 'BadJumpDestination',
-        'OutOfGas', 'OutOfStack', 'StackUnderflow', 'CreateWithValue', 'NoInformation'
-      ]
+    excepted: STRING(32),
+    message: {
+      type: BLOB,
+      allowNull: true
     }
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
