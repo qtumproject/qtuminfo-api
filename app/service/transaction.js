@@ -327,7 +327,7 @@ class TransactionService extends Service {
 
   async getRawTransaction(id) {
     const {Transaction, Witness, TransactionOutput} = this.ctx.model
-    const {Transaction: RawTransaction, Input, Output, InputScript, OutputScript} = this.app.qtuminfo.lib
+    const {Transaction: RawTransaction, Input, Output, OutputScript} = this.app.qtuminfo.lib
 
     let transaction = await Transaction.findOne({
       where: {id},
@@ -490,7 +490,7 @@ class TransactionService extends Service {
   transformInput(input, index, transaction, {brief}) {
     const {InputScript, OutputScript} = this.app.qtuminfo.lib
     let scriptSig = InputScript.fromBuffer(input.scriptSig, {
-      scriptPubKey: OutputScript.fromBuffer(input.scriptPubKey),
+      scriptPubKey: OutputScript.fromBuffer(input.scriptPubKey || Buffer.alloc(0)),
       witness: input.witness,
       isCoinbase: this.isCoinbase(input)
     })
