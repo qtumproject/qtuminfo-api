@@ -238,33 +238,52 @@ class TransactionService extends Service {
       hash: transaction.hash,
       version: transaction.version,
       flag: transaction.flag,
-      inputs: inputs.map((input, index) => ({
-        prevTxId: input.outputTxId || Buffer.alloc(32),
-        outputIndex: input.outputIndex == null ? 0xffffffff : input.outputIndex,
-        scriptSig: input.scriptSig,
-        sequence: input.sequence,
-        witness: witnesses.filter(({inputIndex}) => inputIndex === index).map(({script}) => script),
-        address: input.address && ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
-          ? input.address.contract.addressString
-          : input.address.string
-        ),
-        addressHex: input.address && [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
-          ? input.address.contract.address
-          : undefined,
-        value: input.value,
-        scriptPubKey: input.scriptPubKey
-      })),
+      inputs: inputs.map((input, index) => {
+        let inputObject = {
+          prevTxId: input.outputTxId || Buffer.alloc(32),
+          outputIndex: input.outputIndex == null ? 0xffffffff : input.outputIndex,
+          scriptSig: input.scriptSig,
+          sequence: input.sequence,
+          witness: witnesses.filter(({inputIndex}) => inputIndex === index).map(({script}) => script),
+          value: input.value,
+          scriptPubKey: input.scriptPubKey
+        }
+        if (input.address) {
+          if ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type)) {
+            if (input.address.contract) {
+              inputObject.address = input.address.contract.addressString
+              inputObject.addressHex = input.address.contract.address
+            } else {
+              let address = RawAddress.fromString(input.address.string, this.app.chain)
+              inputObject.address = input.address.string
+              inputObject.addressHex = address.data
+              inputObject.isInvalidContract = true
+            }
+          } else {
+            inputObject.address = input.address.string
+          }
+        }
+        return inputObject
+      }),
       outputs: outputs.map(output => {
         let outputObject = {
           scriptPubKey: output.scriptPubKey,
-          address: output.address && ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
-            ? output.address.contract.addressString
-            : output.address.string
-          ),
-          addressHex: output.address && [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
-            ? output.address.contract.address
-            : undefined,
-          value: output.value,
+          value: output.value
+        }
+        if (output.address) {
+          if ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type)) {
+            if (output.address.contract) {
+              outputObject.address = output.address.contract.addressString
+              outputObject.addressHex = output.address.contract.address
+            } else {
+              let address = RawAddress.fromString(output.address.string, this.app.chain)
+              outputObject.address = output.address.string
+              outputObject.addressHex = address.data
+              outputObject.isInvalidContract = true
+            }
+          } else {
+            outputObject.address = output.address.string
+          }
         }
         if (output.inputTxId) {
           outputObject.spentTxId = output.inputTxId
@@ -503,6 +522,7 @@ class TransactionService extends Service {
       result.value = input.value.toString()
       result.address = input.address
       result.addressHex = input.addressHex && input.addressHex.toString('hex')
+      result.isInvalidContract = input.isInvalidContract
       result.scriptSig = {type: scriptSig.type}
       if (!brief) {
         result.scriptSig.hex = input.scriptSig.toString('hex')
@@ -526,6 +546,7 @@ class TransactionService extends Service {
       value: output.value.toString(),
       address: output.address,
       addressHex: output.addressHex && output.addressHex.toString('hex'),
+      isInvalidContract: output.isInvalidContract,
       scriptPubKey: {type}
     }
     if (!brief) {
