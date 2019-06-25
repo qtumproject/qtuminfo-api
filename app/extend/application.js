@@ -1,5 +1,4 @@
 const path = require('path')
-const _require = require('esm')(module)
 
 const CHAIN = Symbol('qtum.chain')
 
@@ -10,8 +9,8 @@ module.exports = {
   },
   get qtuminfo() {
     return {
-      lib: _require(path.resolve(this.config.qtuminfo.path, 'lib')),
-      rpc: _require(path.resolve(this.config.qtuminfo.path, 'rpc')).default
+      lib: require(path.resolve(this.config.qtuminfo.path, 'lib')),
+      rpc: require(path.resolve(this.config.qtuminfo.path, 'rpc'))
     }
   }
 }
