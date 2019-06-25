@@ -298,6 +298,14 @@ class BlockService extends Service {
       result[transaction.indexInBlock] = result[transaction.indexInBlock] || new Set()
       result[transaction.indexInBlock].add(address.string)
     }
+    let receipts = await EVMReceipt.findAll({
+      where: {blockHeight: height},
+      attributes: ['indexInBlock', 'senderType', 'senderData']
+    })
+    for (let {indexInBlock, senderType, senderData} of receipts) {
+      result[indexInBlock] = result[indexInBlock] || new Set()
+      result[indexInBlock].add(new RawAddress({type: senderType, data: senderData, chain: this.app.chain}).toString())
+    }
     let receiptLogs = await EVMReceiptLog.findAll({
       attributes: ['topic1', 'topic2', 'topic3', 'topic4'],
       include: [
