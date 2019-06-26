@@ -598,7 +598,7 @@ class TransactionService extends Service {
       }
     }
     if (result.length) {
-      return result.length
+      return result
     }
   }
 
