@@ -306,6 +306,7 @@ class TransactionService extends Service {
             contractAddress: output.evmReceipt.contract.addressString,
             contractAddressHex: output.evmReceipt.contractAddress,
             excepted: output.evmReceipt.excepted,
+            exceptedMessage: output.evmReceipt.exceptedMessage,
             logs: eventLogs.filter(log => log.receiptId === output.evmReceipt._id).map(log => ({
               address: log.contract.addressString,
               addressHex: log.address,
@@ -564,6 +565,7 @@ class TransactionService extends Service {
         contractAddress: output.evmReceipt.contractAddress,
         contractAddressHex: output.evmReceipt.contractAddressHex.toString('hex'),
         excepted: output.evmReceipt.excepted,
+        exceptedMessage: output.evmReceipt.exceptedMessage,
         logs: output.evmReceipt.logs.map(log => ({
           address: log.address,
           addressHex: log.addressHex.toString('hex'),
