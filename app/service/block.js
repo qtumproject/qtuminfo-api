@@ -160,21 +160,22 @@ class BlockService extends Service {
     const {sql} = this.ctx.helper
     let rewards = await db.query(sql`
       SELECT SUM(value) AS value FROM (
-        SELECT tx.block_height AS height, utxo.value AS value FROM transaction tx, transaction_output utxo
+        SELECT tx.block_height AS height, output.value AS value FROM transaction tx, transaction_output output
         WHERE
           tx.block_height BETWEEN ${startHeight} AND ${endHeight - 1}
           AND ((tx.block_height <= 5000 AND tx.index_in_block = 0) OR (tx.block_height > 5000 AND tx.index_in_block = 1))
-          AND tx.id = utxo.output_transaction_id
-          AND NOT EXISTS(
-            SELECT refund_transaction_id FROM gas_refund
-            WHERE refund_transaction_id = utxo.output_transaction_id AND refund_index = utxo.output_index
+          AND output.transaction_id = tx._id
+          AND NOT EXISTS (
+            SELECT refund_id FROM gas_refund
+            WHERE refund_id = output.transaction_id AND refund_index = output.output_index
           )
         UNION ALL
-        SELECT tx.block_height AS height, -txo.value AS value FROM transaction tx, transaction_output txo
+        SELECT tx.block_height AS height, -input.value AS value
+        FROM transaction tx, transaction_input input
         WHERE
           tx.block_height BETWEEN ${startHeight} AND ${endHeight - 1}
           AND ((tx.block_height <= 5000 AND tx.index_in_block = 0) OR (tx.block_height > 5000 AND tx.index_in_block = 1))
-          AND tx.id = txo.input_transaction_id
+          AND input.transaction_id = tx._id
       ) block_reward
       GROUP BY height
       ORDER BY height ASC

@@ -7,8 +7,8 @@ class BalanceService extends Service {
     let result = await TransactionOutput.aggregate('value', 'SUM', {
       where: {
         addressId: {[$in]: ids},
-        outputHeight: {[$gt]: 0},
-        inputHeight: null
+        blockHeight: {[$gt]: 0},
+        inputId: 0
       },
       transaction: this.ctx.state.transaction
     })
@@ -56,7 +56,7 @@ class BalanceService extends Service {
     let result = await TransactionOutput.aggregate('value', 'SUM', {
       where: {
         addressId: {[$in]: ids},
-        outputHeight: 0xffffffff,
+        blockHeight: 0xffffffff,
         inputHeight: null
       },
       transaction: this.ctx.state.transaction
@@ -70,7 +70,8 @@ class BalanceService extends Service {
     let result = await TransactionOutput.aggregate('value', 'SUM', {
       where: {
         addressId: {[$in]: ids},
-        outputHeight: {[$gt]: this.app.blockchainInfo.tip.height - 500},
+        blockHeight: {[$gt]: this.app.blockchainInfo.tip.height - 500},
+        inputHeight: null,
         isStake: true
       },
       transaction: this.ctx.state.transaction
@@ -84,7 +85,7 @@ class BalanceService extends Service {
     let result = await TransactionOutput.aggregate('value', 'SUM', {
       where: {
         addressId: {[$in]: ids},
-        outputHeight: {[$between]: [1, this.app.blockchainInfo.tip.height - 500]},
+        blockHeight: {[$between]: [1, this.app.blockchainInfo.tip.height - 500]},
         inputHeight: null
       },
       transaction: this.ctx.state.transaction
@@ -285,7 +286,7 @@ class BalanceService extends Service {
           WHERE
             address_id > 0
             AND (input_height IS NULL OR input_height > ${blockHeight})
-            AND (output_height BETWEEN 1 AND ${blockHeight})
+            AND (block_height BETWEEN 1 AND ${blockHeight})
             AND value > 0
           GROUP BY address_id
         ) list

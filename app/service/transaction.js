@@ -4,7 +4,7 @@ class TransactionService extends Service {
   async getTransaction(id) {
     const {
       Header, Address,
-      Transaction, Witness, TransactionOutput, GasRefund,
+      Transaction, Witness, TransactionOutput, TransactionInput, GasRefund,
       EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, ContractSpend,
       Contract, Qrc20: QRC20, Qrc721: QRC721,
       where, col
@@ -25,7 +25,13 @@ class TransactionService extends Service {
           model: ContractSpend,
           as: 'contractSpendSource',
           required: false,
-          attributes: ['destTxId']
+          attributes: ['destId'],
+          include: [{
+            model: Transaction,
+            as: 'destTransaction',
+            required: true,
+            attributes: ['id']
+          }]
         }
       ],
       transaction: this.ctx.state.transaction
@@ -40,26 +46,60 @@ class TransactionService extends Service {
       transaction: this.ctx.state.transaction
     })
 
-    let inputs = await TransactionOutput.findAll({
-      where: {inputTxId: id},
-      include: [{
-        model: Address,
-        as: 'address',
-        required: false,
-        attributes: ['type', 'string'],
-        include: [{
-          model: Contract,
-          as: 'contract',
+    let inputs = await TransactionInput.findAll({
+      where: {transactionId: transaction._id},
+      include: [
+        {
+          model: Transaction,
+          as: 'outputTransaction',
           required: false,
-          attributes: ['address', 'addressString']
-        }]
-      }],
+          attributes: ['id']
+        },
+        {
+          model: TransactionOutput,
+          as: 'output',
+          on: {
+            transactionId: where(col('output.transaction_id'), '=', col('transaction_input.output_id')),
+            outputIndex: where(col('output.output_index'), '=', col('transaction_input.output_index'))
+          },
+          required: false,
+          attributes: ['outputIndex', 'scriptPubKey']
+        },
+        {
+          model: Address,
+          as: 'address',
+          required: false,
+          attributes: ['type', 'string'],
+          include: [{
+            model: Contract,
+            as: 'contract',
+            required: false,
+            attributes: ['address', 'addressString']
+          }]
+        }
+      ],
       order: [['inputIndex', 'ASC']],
       transaction: this.ctx.state.transaction
     })
     let outputs = await TransactionOutput.findAll({
-      where: {outputTxId: id},
+      where: {transactionId: transaction._id},
       include: [
+        {
+          model: Transaction,
+          as: 'inputTransaction',
+          required: false,
+          attributes: ['id']
+        },
+        {
+          model: TransactionInput,
+          as: 'input',
+          on: {
+            transactionId: where(col('input.transaction_id'), '=', col('transaction_output.input_id')),
+            outputIndex: where(col('input.input_index'), '=', col('transaction_output.input_index'))
+          },
+          required: false,
+          attributes: []
+        },
         {
           model: Address,
           as: 'address',
@@ -76,31 +116,45 @@ class TransactionService extends Service {
           model: GasRefund,
           as: 'refund',
           on: {
-            transactionId: where(col('refund.transaction_id'), '=', col('transaction_output.output_transaction_id')),
+            transactionId: where(col('refund.transaction_id'), '=', transaction._id),
             outputIndex: where(col('refund.output_index'), '=', col('transaction_output.output_index'))
           },
           required: false,
-          attributes: ['refundTxId', 'refundIndex'],
-          include: [{
-            model: TransactionOutput,
-            as: 'refundTo',
-            on: {
-              transactionId: where(col('refund->refundTo.output_transaction_id'), '=', col('refund.refund_transaction_id')),
-              outputIndex: where(col('refund->refundTo.output_index'), '=', col('refund.refund_index'))
+          attributes: ['refundIndex'],
+          include: [
+            {
+              model: Transaction,
+              as: 'refundToTransaction',
+              required: true,
+              attributes: ['id']
             },
-            required: true,
-            attributes: ['value']
-          }]
+            {
+              model: TransactionOutput,
+              as: 'refundTo',
+              on: {
+                transactionId: where(col('refund->refundTo.transaction_id'), '=', col('refund.refund_id')),
+                outputIndex: where(col('refund->refundTo.output_index'), '=', col('refund.refund_index'))
+              },
+              required: true,
+              attributes: ['value']
+            }
+          ]
         },
         {
           model: GasRefund,
           as: 'refundTo',
           on: {
-            transactionId: where(col('refundTo.refund_transaction_id'), '=', col('transaction_output.output_transaction_id')),
+            transactionId: where(col('refundTo.refund_id'), '=', transaction._id),
             outputIndex: where(col('refundTo.refund_index'), '=', col('transaction_output.output_index'))
           },
           required: false,
-          attributes: ['transactionId', 'outputIndex']
+          attributes: ['outputIndex'],
+          include: [{
+            model: Transaction,
+            as: 'transaction',
+            required: true,
+            attributes: ['id']
+          }]
         },
         {
           model: EVMReceipt,
@@ -152,21 +206,21 @@ class TransactionService extends Service {
         transaction: this.ctx.state.transaction
       })
       let contractSpendIds = (await Transaction.findAll({
-        attributes: ['id'],
+        attributes: ['_id'],
         include: [{
           model: ContractSpend,
           as: 'contractSpendSource',
           required: true,
           attributes: [],
-          where: {destTxId: id}
+          where: {destId: transaction._id}
         }],
         order: [['blockHeight', 'ASC'], ['indexInBlock', 'ASC']],
         transaction: this.ctx.state.transaction
-      })).map(item => item.id)
+      })).map(item => item._id)
       if (contractSpendIds.length) {
-        let inputs = await TransactionOutput.findAll({
-          where: {inputTxId: {[$in]: contractSpendIds}},
-          attributes: ['inputTxId', 'value'],
+        let inputs = await TransactionInput.findAll({
+          where: {transactionId: {[$in]: contractSpendIds}},
+          attributes: ['transactionId', 'value'],
           include: [{
             model: Address,
             as: 'address',
@@ -183,8 +237,8 @@ class TransactionService extends Service {
           transaction: this.ctx.state.transaction
         })
         let outputs = await TransactionOutput.findAll({
-          where: {outputTxId: {[$in]: contractSpendIds}},
-          attributes: ['outputTxId', 'value'],
+          where: {transactionId: {[$in]: contractSpendIds}},
+          attributes: ['transactionId', 'value'],
           include: [{
             model: Address,
             as: 'address',
@@ -202,7 +256,7 @@ class TransactionService extends Service {
         })
         for (let id of contractSpendIds) {
           contractSpends.push({
-            inputs: inputs.filter(input => Buffer.compare(input.inputTxId, id) === 0).map(input => {
+            inputs: inputs.filter(input => input.transactionId === id).map(input => {
               let result = {}
               if (input.address) {
                 result.address = [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
@@ -215,7 +269,7 @@ class TransactionService extends Service {
               result.value = input.value
               return result
             }),
-            outputs: outputs.filter(output => Buffer.compare(output.outputTxId, id) === 0).map(output => {
+            outputs: outputs.filter(output => output.transactionId === id).map(output => {
               let result = {}
               if (output.address) {
                 result.address = [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
@@ -240,13 +294,13 @@ class TransactionService extends Service {
       flag: transaction.flag,
       inputs: inputs.map((input, index) => {
         let inputObject = {
-          prevTxId: input.outputTxId || Buffer.alloc(32),
-          outputIndex: input.outputIndex == null ? 0xffffffff : input.outputIndex,
+          prevTxId: input.outputTransaction ? input.outputTransaction.id : Buffer.alloc(32),
+          outputIndex: input.outputIndex,
           scriptSig: input.scriptSig,
           sequence: input.sequence,
           witness: witnesses.filter(({inputIndex}) => inputIndex === index).map(({script}) => script),
           value: input.value,
-          scriptPubKey: input.scriptPubKey
+          scriptPubKey: input.output && input.output.scriptPubKey
         }
         if (input.address) {
           if ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type)) {
@@ -285,16 +339,18 @@ class TransactionService extends Service {
             outputObject.address = output.address.string
           }
         }
-        if (output.inputTxId) {
-          outputObject.spentTxId = output.inputTxId
+        if (output.inputTransaction) {
+          outputObject.spentTxId = output.inputTransaction.id
           outputObject.spentIndex = output.inputIndex
         }
         if (output.refund) {
-          outputObject.refundTxId = output.refund.refundTxId
+          outputObject.refundTxId = output.refund.refundToTransaction.id
           outputObject.refundIndex = output.refund.refundIndex
           outputObject.refundValue = output.refund.refundTo.value
         }
-        outputObject.isRefund = Boolean(output.refundTo)
+        if (output.refundTo) {
+          outputObject.isRefund = true
+        }
         if (output.evmReceipt) {
           outputObject.evmReceipt = {
             sender: new RawAddress({
@@ -338,7 +394,7 @@ class TransactionService extends Service {
           timestamp: transaction.header.timestamp,
         }
       } : {},
-      ...transaction.contractSpendSource ? {contractSpendSource: transaction.contractSpendSource.destTxId} : {},
+      ...transaction.contractSpendSource ? {contractSpendSource: transaction.contractSpendSource.destTransaction.id} : {},
       contractSpends,
       size: transaction.size,
       weight: transaction.weight
@@ -346,12 +402,12 @@ class TransactionService extends Service {
   }
 
   async getRawTransaction(id) {
-    const {Transaction, Witness, TransactionOutput} = this.ctx.model
+    const {Transaction, Witness, TransactionOutput, TransactionInput} = this.ctx.model
     const {Transaction: RawTransaction, Input, Output, OutputScript} = this.app.qtuminfo.lib
 
     let transaction = await Transaction.findOne({
       where: {id},
-      attributes: ['version', 'flag', 'lockTime'],
+      attributes: ['_id', 'version', 'flag', 'lockTime'],
       transaction: this.ctx.state.transaction
     })
     if (!transaction) {
@@ -364,14 +420,20 @@ class TransactionService extends Service {
       transaction: this.ctx.state.transaction
     })
 
-    let inputs = await TransactionOutput.findAll({
-      where: {inputTxId: id},
-      attributes: ['outputTxId', 'outputIndex', 'scriptSig', 'sequence'],
+    let inputs = await TransactionInput.findAll({
+      where: {transactionId: transaction._id},
+      attributes: ['outputIndex', 'scriptSig', 'sequence'],
+      include: [{
+        model: Transaction,
+        as: 'outputTransaction',
+        required: false,
+        attributes: ['id'],
+      }],
       order: [['inputIndex', 'ASC']],
       transaction: this.ctx.state.transaction
     })
     let outputs = await TransactionOutput.findAll({
-      where: {outputTxId: id},
+      where: {transactionId: transaction._id},
       attributes: ['value', 'scriptPubKey'],
       order: [['outputIndex', 'ASC']],
       transaction: this.ctx.state.transaction
@@ -381,8 +443,8 @@ class TransactionService extends Service {
       version: transaction.version,
       flag: transaction.flag,
       inputs: inputs.map((input, index) => new Input({
-        prevTxId: input.outputTxId || Buffer.alloc(32),
-        outputIndex: input.outputIndex == null ? 0xffffffff : input.outputIndex,
+        prevTxId: input.outputTransaction ? input.outputTransaction.id : Buffer.alloc(32),
+        outputIndex: input.outputIndex,
         scriptSig: input.scriptSig,
         sequence: input.sequence,
         witness: witnesses.filter(({inputIndex}) => inputIndex === index).map(({script}) => script)

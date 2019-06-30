@@ -89,7 +89,7 @@ class AddressController extends Controller {
       address: utxo.address.string,
       value: utxo.value.toString(),
       isStake: utxo.isStake,
-      blockHeight: utxo.outputHeight,
+      blockHeight: utxo.blockHeight,
       confirmations: utxo.confirmations
     }))
   }

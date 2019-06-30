@@ -51,7 +51,7 @@ class AddressService extends Service {
       SELECT COUNT(*) AS count FROM (
         SELECT transaction_id FROM balance_change WHERE address_id IN ${addressIds}
         UNION
-        SELECT transaction_id AS transaction_id FROM evm_receipt
+        SELECT transaction_id FROM evm_receipt
         WHERE sender_type = ${Address.parseType('pubkeyhash')} AND sender_data IN ${hexAddresses}
         UNION
         SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log, contract
@@ -107,33 +107,41 @@ class AddressService extends Service {
   }
 
   async getUTXO(ids) {
-    const {Address, TransactionOutput} = this.ctx.model
+    const {Address, Transaction, TransactionOutput} = this.ctx.model
     const {in: $in, gt: $gt} = this.app.Sequelize.Op
     const blockHeight = this.app.blockchainInfo.tip.height
     let utxos = await TransactionOutput.findAll({
       where: {
         addressId: {[$in]: ids},
-        outputHeight: {[$gt]: 0},
+        blockHeight: {[$gt]: 0},
         inputHeight: null
       },
-      attributes: ['outputTxId', 'outputIndex', 'outputHeight', 'scriptPubKey', 'value', 'isStake'],
-      include: [{
-        model: Address,
-        as: 'address',
-        required: true,
-        attributes: ['string']
-      }],
+      attributes: ['transactionId', 'outputIndex', 'blockHeight', 'scriptPubKey', 'value', 'isStake'],
+      include: [
+        {
+          model: Transaction,
+          as: 'outputTransaction',
+          required: true,
+          attributes: ['id']
+        },
+        {
+          model: Address,
+          as: 'address',
+          required: true,
+          attributes: ['string']
+        }
+      ],
       transaction: this.ctx.state.transaction
     })
     return utxos.map(utxo => ({
-      transactionId: utxo.outputTxId,
+      transactionId: utxo.outputTransaction.id,
       outputIndex: utxo.outputIndex,
       scriptPubKey: utxo.scriptPubKey,
       address: utxo.address.string,
       value: utxo.value,
       isStake: utxo.isStake,
-      blockHeight: utxo.outputHeight,
-      confirmations: utxo.outputHeight === 0xffffffff ? 0 : blockHeight - utxo.outputHeight + 1
+      blockHeight: utxo.blockHeight,
+      confirmations: utxo.blockHeight === 0xffffffff ? 0 : blockHeight - utxo.blockHeight + 1
     }))
   }
 }

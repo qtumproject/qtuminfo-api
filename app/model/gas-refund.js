@@ -1,18 +1,17 @@
 module.exports = app => {
-  const {INTEGER, CHAR} = app.Sequelize
+  const {INTEGER, BIGINT} = app.Sequelize
 
   let GasRefund = app.model.define('gas_refund', {
     transactionId: {
-      type: CHAR(32).BINARY,
+      type: BIGINT.UNSIGNED,
       primaryKey: true
     },
     outputIndex: {
       type: INTEGER.UNSIGNED,
       primaryKey: true
     },
-    refundTxId: {
-      type: CHAR(32).BINARY,
-      field: 'refund_transaction_id',
+    refundId: {
+      type: BIGINT.UNSIGNED,
       unique: 'refund'
     },
     refundIndex: {
@@ -23,12 +22,14 @@ module.exports = app => {
 
   GasRefund.associate = () => {
     const {Transaction, TransactionOutput} = app.model
-    Transaction.hasMany(GasRefund, {as: 'refunds', foreignKey: 'transactionId', sourceKey: 'id'})
-    GasRefund.belongsTo(Transaction, {as: 'transaction', foreignKey: 'transactionId', targetKey: 'id'})
-    TransactionOutput.hasOne(GasRefund, {as: 'refund', foreignKey: 'transactionId', sourceKey: 'outputTxId'})
-    GasRefund.belongsTo(TransactionOutput, {as: 'refund', foreignKey: 'transactionId', targetKey: 'outputTxId'})
-    TransactionOutput.hasOne(GasRefund, {as: 'refundTo', foreignKey: 'refundTxId', sourceKey: 'outputTxId'})
-    GasRefund.belongsTo(TransactionOutput, {as: 'refundTo', foreignKey: 'refundTxId', targetKey: 'outputTxId'})
+    Transaction.hasMany(GasRefund, {as: 'refunds', foreignKey: 'transactionId'})
+    GasRefund.belongsTo(Transaction, {as: 'transaction', foreignKey: 'transactionId'})
+    TransactionOutput.hasOne(GasRefund, {as: 'refund', foreignKey: 'transactionId'})
+    GasRefund.belongsTo(TransactionOutput, {as: 'refund', foreignKey: 'transactionId'})
+    Transaction.hasOne(GasRefund, {as: 'refundToTransaction', foreignKey: 'refundId'})
+    GasRefund.belongsTo(Transaction, {as: 'refundToTransaction', foreignKey: 'refundId'})
+    TransactionOutput.hasOne(GasRefund, {as: 'refundTo', foreignKey: 'refundId'})
+    GasRefund.belongsTo(TransactionOutput, {as: 'refundTo', foreignKey: 'refundId'})
   }
 
   return GasRefund

@@ -33,12 +33,12 @@ module.exports = app => {
       type: BIGINT.UNSIGNED,
       unique: 'transaction'
     },
-    blockHeight: INTEGER.UNSIGNED,
-    indexInBlock: INTEGER.UNSIGNED,
     outputIndex: {
       type: INTEGER.UNSIGNED,
       unique: 'transaction'
     },
+    blockHeight: INTEGER.UNSIGNED,
+    indexInBlock: INTEGER.UNSIGNED,
     senderType: {
       type: INTEGER(3).UNSIGNED,
       get() {
@@ -55,10 +55,7 @@ module.exports = app => {
     gasUsed: INTEGER.UNSIGNED,
     contractAddress: CHAR(20).BINARY,
     excepted: STRING(32),
-    exceptedMessage: {
-      type: TEXT,
-      allowNull: true
-    }
+    exceptedMessage: TEXT
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
   EVMReceipt.associate = () => {
@@ -66,8 +63,8 @@ module.exports = app => {
     EVMReceipt.belongsTo(Header, {as: 'header', foreignKey: 'blockHeight'})
     Transaction.hasMany(EVMReceipt, {as: 'evmReceipts', foreignKey: 'transactionId'})
     EVMReceipt.belongsTo(Transaction, {as: 'transaction', foreignKey: 'transactionId'})
-    TransactionOutput.hasOne(EVMReceipt, {as: 'evmReceipt', foreignKey: 'transactionId', sourceKey: 'outputTxId'})
-    EVMReceipt.belongsTo(TransactionOutput, {as: 'transactionOutput', foreignKey: 'transactionId', targetKey: 'outputTxId'})
+    TransactionOutput.hasOne(EVMReceipt, {as: 'evmReceipt', foreignKey: 'transactionId'})
+    EVMReceipt.belongsTo(TransactionOutput, {as: 'transactionOutput', foreignKey: 'transactionId'})
   }
 
   return EVMReceipt
