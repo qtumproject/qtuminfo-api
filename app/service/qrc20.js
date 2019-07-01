@@ -86,7 +86,7 @@ class QRC20Service extends Service {
     let topicAddresses = addresses.map(address => Buffer.concat([Buffer.alloc(12), address]))
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
-    const {sql, sqlRaw} = this.ctx.helper
+    const {sql} = this.ctx.helper
     const {
       Header, Transaction,
       EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog,
@@ -104,22 +104,22 @@ class QRC20Service extends Service {
       sql`(log.topic2 IN ${topicAddresses} OR log.topic3 IN ${topicAddresses})`
     ].join(' AND ')
 
-    let result = await db.query(sqlRaw`
+    let result = await db.query(sql`
       SELECT COUNT(DISTINCT(receipt.transaction_id)) AS totalCount
       FROM evm_receipt receipt, evm_receipt_log log, qrc20
-      WHERE receipt._id = log.receipt_id AND log.address = qrc20.contract_address AND ${logFilter}
+      WHERE receipt._id = log.receipt_id AND log.address = qrc20.contract_address AND ${{raw: logFilter}}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     let totalCount = result[0].totalCount || 0
     if (totalCount === 0) {
       return {totalCount: 0, transactions: []}
     }
-    let ids = (await db.query(sqlRaw`
+    let ids = (await db.query(sql`
       SELECT transaction_id AS id FROM evm_receipt receipt
       INNER JOIN (
         SELECT DISTINCT(receipt.transaction_id) AS id FROM evm_receipt receipt, evm_receipt_log log, qrc20
-        WHERE receipt._id = log.receipt_id AND log.address = qrc20.contract_address AND ${logFilter}
+        WHERE receipt._id = log.receipt_id AND log.address = qrc20.contract_address AND ${{raw: logFilter}}
       ) list ON list.id = receipt.transaction_id
-      ORDER BY receipt.block_height ${order}, receipt.index_in_block ${order}
+      ORDER BY receipt.block_height ${{raw: order}}, receipt.index_in_block ${{raw: order}}
       LIMIT ${offset}, ${limit}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({id}) => id)
 

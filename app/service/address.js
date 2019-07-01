@@ -1,10 +1,12 @@
 const {Service} = require('egg')
 
 class AddressService extends Service {
-  async getAddressSummary(addressIds, p2pkhAddressIds, hexAddresses) {
+  async getAddressSummary(addressIds, p2pkhAddressIds, rawAddresses) {
+    const {Address} = this.ctx.app.qtuminfo.lib
     const {Block} = this.ctx.model
     const {balance: balanceService, qrc20: qrc20Service, qrc721: qrc721Service} = this.ctx.service
     const {in: $in, gt: $gt} = this.app.Sequelize.Op
+    let hexAddresses = rawAddresses.filter(address => address.type === Address.PAY_TO_PUBLIC_KEY_HASH).map(address => address.data)
     let [
       {totalReceived, totalSent},
       unconfirmed,
@@ -24,7 +26,7 @@ class AddressService extends Service {
       qrc721Service.getAllQRC721Balances(hexAddresses),
       balanceService.getBalanceRanking(addressIds),
       Block.count({where: {minerId: {[$in]: p2pkhAddressIds}, height: {[$gt]: 0}}}),
-      this.getAddressTransactionCount(addressIds, hexAddresses),
+      this.getAddressTransactionCount(addressIds, rawAddresses),
     ])
     return {
       balance: totalReceived - totalSent,
@@ -41,18 +43,21 @@ class AddressService extends Service {
     }
   }
 
-  async getAddressTransactionCount(addressIds, hexAddresses) {
-    const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+  async getAddressTransactionCount(addressIds, rawAddresses) {
+    const {Address: RawAddress, Solidity} = this.app.qtuminfo.lib
+    const TransferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
     const {Address} = db
     const {sql} = this.ctx.helper
-    let topics = hexAddresses.map(address => Buffer.concat([Buffer.alloc(12), address]))
+    let topics = rawAddresses
+      .filter(address => address.type === RawAddress.PAY_TO_PUBLIC_KEY_HASH)
+      .map(address => Buffer.concat([Buffer.alloc(12), address.data]))
     let [{count}] = await db.query(sql`
       SELECT COUNT(*) AS count FROM (
         SELECT transaction_id FROM balance_change WHERE address_id IN ${addressIds}
         UNION
         SELECT transaction_id FROM evm_receipt
-        WHERE sender_type = ${Address.parseType('pubkeyhash')} AND sender_data IN ${hexAddresses}
+        WHERE (sender_type, sender_data) IN ${rawAddresses.map(address => [Address.parseType(address.type), address.data])}
         UNION
         SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log, contract
         WHERE receipt._id = log.receipt_id
@@ -68,15 +73,18 @@ class AddressService extends Service {
     return count
   }
 
-  async getAddressTransactions(addressIds, hexAddresses) {
-    const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+  async getAddressTransactions(addressIds, rawAddresses) {
+    const {Address: RawAddress, Solidity} = this.app.qtuminfo.lib
+    const TransferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
     const {Address} = db
     const {sql} = this.ctx.helper
     let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
-    let topics = hexAddresses.map(address => Buffer.concat([Buffer.alloc(12), address]))
-    let totalCount = await this.getAddressTransactionCount(addressIds, hexAddresses)
+    let topics = rawAddresses
+      .filter(address => address.type === RawAddress.PAY_TO_PUBLIC_KEY_HASH)
+      .map(address => Buffer.concat([Buffer.alloc(12), address.data]))
+    let totalCount = await this.getAddressTransactionCount(addressIds, rawAddresses)
     let transactions = (await db.query(sql`
       SELECT tx.id AS id FROM (
         SELECT _id FROM (
@@ -85,7 +93,7 @@ class AddressService extends Service {
           UNION
           SELECT block_height, index_in_block, transaction_id AS _id
           FROM evm_receipt
-          WHERE sender_type = ${Address.parseType('pubkeyhash')} AND sender_data IN ${hexAddresses}
+          WHERE (sender_type, sender_data) IN ${rawAddresses.map(address => [Address.parseType(address.type), address.data])}
           UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
           FROM evm_receipt receipt, evm_receipt_log log, contract

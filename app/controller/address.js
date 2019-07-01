@@ -4,7 +4,7 @@ class AddressController extends Controller {
   async summary() {
     let {ctx} = this
     let {address} = ctx.state
-    let summary = await ctx.service.address.getAddressSummary(address.addressIds, address.p2pkhAddressIds, address.hexAddresses)
+    let summary = await ctx.service.address.getAddressSummary(address.addressIds, address.p2pkhAddressIds, address.rawAddresses)
     ctx.body = {
       balance: summary.balance.toString(),
       totalReceived: summary.totalReceived.toString(),
@@ -72,7 +72,7 @@ class AddressController extends Controller {
   async transactions() {
     let {ctx} = this
     let {address} = ctx.state
-    let {totalCount, transactions} = await ctx.service.address.getAddressTransactions(address.addressIds, address.hexAddresses)
+    let {totalCount, transactions} = await ctx.service.address.getAddressTransactions(address.addressIds, address.rawAddresses)
     ctx.body = {
       totalCount,
       transactions: transactions.map(id => id.toString('hex'))
@@ -113,8 +113,12 @@ class AddressController extends Controller {
   }
 
   async qrc20BalanceHistory() {
+    const {Address} = this.app.qtuminfo.lib
     let {ctx} = this
-    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory(ctx.state.address.hexAddresses, null)
+    let hexAddresses = ctx.state.address.rawAddresses
+      .filter(address => address.type === Address.PAY_TO_PUBLIC_KEY_HASH)
+      .map(address => address.data)
+    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory(hexAddresses, null)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({

@@ -6,13 +6,10 @@ module.exports = () => async function address(ctx, next) {
   const {in: $in} = ctx.app.Sequelize.Op
 
   let addresses = ctx.params.address.split(',')
-  let hexAddresses = []
+  let rawAddresses = []
   for (let address of addresses) {
     try {
-      let rawAddress = RawAddress.fromString(address, chain)
-      if (rawAddress.type === RawAddress.PAY_TO_PUBLIC_KEY_HASH) {
-        hexAddresses.push(rawAddress.data)
-      }
+      rawAddresses.push(RawAddress.fromString(address, chain))
     } catch (err) {
       ctx.throw(400)
     }
@@ -23,9 +20,9 @@ module.exports = () => async function address(ctx, next) {
     transaction: ctx.state.transaction
   })
   ctx.state.address = {
+    rawAddresses,
     addressIds: result.map(address => address._id),
     p2pkhAddressIds: result.filter(address => address.type === RawAddress.PAY_TO_PUBLIC_KEY_HASH).map(address => address._id),
-    hexAddresses
   }
   await next()
 }

@@ -175,11 +175,12 @@ class BalanceService extends Service {
       }
       if (havingFilter) {
         transactionIds = (await db.query(sql`
-          SELECT transaction_id AS transactionId FROM balance_change
+          SELECT MIN(block_height) AS block_height, MIN(index_in_block) AS index_in_block, transaction_id AS transactionId
+          FROM balance_change
           WHERE address_id IN ${ids} AND block_height > 0
           GROUP BY transaction_id
           HAVING ${{raw: havingFilter}}
-          ORDER BY MIN(block_height) ${{raw: order}}, MIN(index_in_block) ${{raw: order}}, transaction_id ${{raw: order}}
+          ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, transaction_id ${{raw: order}}
           LIMIT ${offset}, ${limit}
         `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({transactionId}) => transactionId)
       } else {
@@ -199,11 +200,11 @@ class BalanceService extends Service {
           header.hash AS blockHash, header.timestamp AS timestamp,
           list.value AS value
         FROM (
-          SELECT transaction_id, SUM(value) AS value
+          SELECT MIN(block_height) AS block_height, MIN(index_in_block) AS index_in_block, transaction_id, SUM(value) AS value
           FROM balance_change
           WHERE transaction_id IN ${transactionIds} AND address_id IN ${ids}
           GROUP BY transaction_id
-          ORDER BY MIN(block_height) ${{raw: order}}, MIN(index_in_block) ${{raw: order}}, transaction_id ${{raw: order}}
+          ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, transaction_id ${{raw: order}}
         ) list
         INNER JOIN transaction ON transaction._id = list.transaction_id
         LEFT JOIN header ON header.height = transaction.block_height
