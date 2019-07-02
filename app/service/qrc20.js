@@ -75,16 +75,12 @@ class QRC20Service extends Service {
       symbol: item.symbol,
       decimals: item.decimals,
       balance: item.contract.qrc20Balances.map(({balance}) => balance).reduce((x, y) => x + y)
-    })).filter(({balance}) => balance)
+    }))
   }
 
-  async getQRC20BalanceHistory(addresses, tokens) {
-    if (addresses.length === 0 || tokens && tokens.length === 0) {
-      return {totalCount: 0, transactions: []}
-    }
-    let addressSet = new Set(addresses.map(address => address.toString('hex')))
-    let topicAddresses = addresses.map(address => Buffer.concat([Buffer.alloc(12), address]))
-    const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+  async getQRC20BalanceHistory(addresses, token) {
+    const {Address: RawAddress, Solidity} = this.app.qtuminfo.lib
+    const TransferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
     const {sql} = this.ctx.helper
     const {
@@ -94,10 +90,30 @@ class QRC20Service extends Service {
       literal
     } = db
     const {ne: $ne, and: $and, or: $or, in: $in} = this.app.Sequelize.Op
+    let tokenAddress = null
+    if (token) {
+      try {
+        let rawAddress = RawAddress.fromString(token, this.app.chain)
+        if (rawAddress.type === RawAddress.CONTRACT) {
+          tokenAddress = rawAddress.data
+        } else if (rawAddress.type === RawAddress.EVM_CONTRACT) {
+          tokenAddress = rawAddress.data
+        } else {
+          this.ctx.throw(400)
+        }
+      } catch (err) {
+        this.ctx.throw(400)
+      }
+    }
+    if (addresses.length === 0) {
+      return {totalCount: 0, transactions: []}
+    }
+    let addressSet = new Set(addresses.map(address => address.toString('hex')))
+    let topicAddresses = addresses.map(address => Buffer.concat([Buffer.alloc(12), address]))
     let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
     let logFilter = [
-      ...tokens ? [sql`log.address IN ${tokens}`] : [],
+      ...tokenAddress ? [sql`log.address = ${tokenAddress}`] : [],
       sql`log.topic1 = ${TransferABI.id}`,
       'log.topic3 IS NOT NULL',
       'log.topic4 IS NULL',
@@ -145,7 +161,7 @@ class QRC20Service extends Service {
           as: 'logs',
           required: true,
           where: {
-            ...tokens ? {address: {[$in]: tokens}} : {},
+            ...tokenAddress ? {address: tokenAddress} : {},
             topic1: TransferABI.id,
             topic3: {[$ne]: null},
             topic4: null,
@@ -182,7 +198,7 @@ class QRC20Service extends Service {
     if (list.length > 0) {
       let intialBalanceList = await QRC20Balance.findAll({
         where: {
-          ...tokens ? {contractAddress: {[$in]: tokens}} : {},
+          ...tokenAddress ? {contractAddress: tokenAddress} : {},
           address: {[$in]: addresses}
         },
         attributes: ['balance'],
@@ -201,7 +217,7 @@ class QRC20Service extends Service {
       let {blockHeight, indexInBlock} = list[0]
       let latestLogs = await EVMReceiptLog.findAll({
         where: {
-          ...tokens ? {address: {[$in]: tokens}} : {},
+          ...tokenAddress ? {address: tokenAddress} : {},
           topic1: TransferABI.id,
           topic3: {[$ne]: null},
           topic4: null,

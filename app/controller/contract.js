@@ -82,7 +82,7 @@ class ContractController extends Controller {
 
   async qrc20BalanceHistory() {
     let {ctx} = this
-    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory([ctx.state.contract.contractAddress], null)
+    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory([ctx.state.contract.contractAddress], ctx.query.token)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({

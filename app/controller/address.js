@@ -118,7 +118,7 @@ class AddressController extends Controller {
     let hexAddresses = ctx.state.address.rawAddresses
       .filter(address => address.type === Address.PAY_TO_PUBLIC_KEY_HASH)
       .map(address => address.data)
-    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory(hexAddresses, null)
+    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory(hexAddresses, ctx.query.token)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({
