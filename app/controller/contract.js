@@ -181,6 +181,8 @@ class ContractController extends Controller {
         blockHeight: log.blockHeight,
         timestamp: log.timestamp,
         transactionId: log.transactionId.toString('hex'),
+        outputIndex: log.outputIndex,
+        sender: log.sender.toString(),
         contractAddress: log.contractAddress,
         contractAddressHex: log.contractAddressHex.toString('hex'),
         address: log.address,

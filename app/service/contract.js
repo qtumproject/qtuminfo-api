@@ -187,76 +187,53 @@ class ContractService extends Service {
   }
 
   async searchLogs({fromBlock, toBlock, contract, topic1, topic2, topic3, topic4} = {}) {
+    const {Address} = this.app.qtuminfo.lib
     const db = this.ctx.model
     const {Header, Transaction, EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, Contract} = db
-    const {in: $in, gte: $gte, lte: $lte, between: $between} = this.ctx.app.Sequelize.Op
+    const {in: $in} = this.ctx.app.Sequelize.Op
     const {sql} = this.ctx.helper
     let {limit, offset} = this.ctx.state.pagination
-    let idFilter = {}
+
+    let blockFilter = 'TRUE'
     if (fromBlock != null && toBlock != null) {
-      let idResult = await db.query(sql`
-        SELECT MIN(_id) AS min, MAX(_id) AS max FROM evm_receipt
-        WHERE block_height BETWEEN ${fromBlock} AND ${toBlock}
-      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-      if (idResult.length === 0) {
-        return {totalCount: 0, logs: []}
-      }
-      idFilter.receiptId = {[$between]: [idResult[0].min, idResult[0].max]}
+      blockFilter = sql`receipt.block_height BETWEEN ${fromBlock} AND ${toBlock}`
     } else if (fromBlock != null) {
-      let idResult = await db.query(sql`
-        SELECT MIN(_id) AS min FROM evm_receipt
-        WHERE block_height >= ${fromBlock}
-      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-      if (idResult.length === 0) {
-        return {totalCount: 0, logs: []}
-      }
-      idFilter.receiptId = {[$gte]: [idResult[0].min]}
+      blockFilter = sql`receipt.block_height >= ${fromBlock}`
     } else if (toBlock != null) {
-      let idResult = await db.query(sql`
-        SELECT MAX(_id) AS max FROM evm_receipt
-        WHERE block_height <= ${toBlock}
-      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-      if (idResult.length === 0) {
-        return {totalCount: 0, logs: []}
-      }
-      idFilter.receiptId = {[$lte]: [idResult[0].max]}
+      blockFilter = sql`receipt.block_height <= ${toBlock}`
+    }
+    let contractFilter = contract ? sql`log.address = ${contract}` : 'TRUE'
+    let topic1Filter = topic1 ? sql`log.topic1 = ${topic1}` : 'TRUE'
+    let topic2Filter = topic2 ? sql`log.topic2 = ${topic2}` : 'TRUE'
+    let topic3Filter = topic3 ? sql`log.topic3 = ${topic3}` : 'TRUE'
+    let topic4Filter = topic4 ? sql`log.topic4 = ${topic4}` : 'TRUE'
+
+    let [{count: totalCount}] = await db.query(sql`
+      SELECT COUNT(DISTINCT(log._id)) AS count from evm_receipt receipt, evm_receipt_log log
+      WHERE receipt._id = log.receipt_id AND ${{raw: blockFilter}} AND ${{raw: contractFilter}}
+        AND ${{raw: topic1Filter}} AND ${{raw: topic2Filter}} AND ${{raw: topic3Filter}} AND ${{raw: topic4Filter}}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.transaction})
+    if (totalCount === 0) {
+      return {totalCount, logs: []}
     }
 
-    let totalCount = await EVMReceiptLog.count({
-      where: {
-        ...idFilter,
-        ...contract ? {address: contract} : {},
-        ...topic1 ? {topic1} : {},
-        ...topic2 ? {topic2} : {},
-        ...topic3 ? {topic3} : {},
-        ...topic4 ? {topic4} : {}
-      },
-      transaction: this.ctx.state.transaction
-    })
-    let ids = await EVMReceiptLog.findAll({
-      where: {
-        ...idFilter,
-        ...contract ? {address: contract} : {},
-        ...topic1 ? {topic1} : {},
-        ...topic2 ? {topic2} : {},
-        ...topic3 ? {topic3} : {},
-        ...topic4 ? {topic4} : {}
-      },
-      attributes: ['_id'],
-      order: [['receiptId', 'ASC'], ['logIndex', 'ASC']],
-      limit,
-      offset,
-      transaction: this.ctx.state.transaction
-    })
+    let ids = (await db.query(sql`
+      SELECT log._id AS _id from evm_receipt receipt, evm_receipt_log log
+      WHERE receipt._id = log.receipt_id AND ${{raw: blockFilter}} AND ${{raw: contractFilter}}
+        AND ${{raw: topic1Filter}} AND ${{raw: topic2Filter}} AND ${{raw: topic3Filter}} AND ${{raw: topic4Filter}}
+      ORDER BY log._id ASC
+      LIMIT ${offset}, ${limit}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.transaction})).map(log => log._id)
+
     let logs = await EVMReceiptLog.findAll({
-      where: {_id: {[$in]: ids.map(item => item._id)}},
+      where: {_id: {[$in]: ids}},
       attributes: ['topic1', 'topic2', 'topic3', 'topic4', 'data'],
       include: [
         {
           model: EVMReceipt,
           as: 'receipt',
           required: true,
-          attributes: ['transactionId', 'blockHeight'],
+          attributes: ['transactionId', 'outputIndex', 'blockHeight', 'senderType', 'senderData'],
           include: [
             {
               model: Transaction,
@@ -296,6 +273,8 @@ class ContractService extends Service {
         blockHeight: log.receipt.transaction.header.height,
         timestamp: log.receipt.transaction.header.timestamp,
         transactionId: log.receipt.transaction.id,
+        outputIndex: log.receipt.outputIndex,
+        sender: new Address({type: log.receipt.senderType, data: log.receipt.senderData, chain: this.app.chain}),
         contractAddress: log.receipt.contract.addressString,
         contractAddressHex: log.receipt.contract.address,
         address: log.contract.addressString,

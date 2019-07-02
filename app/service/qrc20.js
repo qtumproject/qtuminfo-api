@@ -119,7 +119,8 @@ class QRC20Service extends Service {
         SELECT DISTINCT(receipt.transaction_id) AS id FROM evm_receipt receipt, evm_receipt_log log, qrc20
         WHERE receipt._id = log.receipt_id AND log.address = qrc20.contract_address AND ${{raw: logFilter}}
       ) list ON list.id = receipt.transaction_id
-      ORDER BY receipt.block_height ${{raw: order}}, receipt.index_in_block ${{raw: order}}
+      ORDER BY receipt.block_height ${{raw: order}}, receipt.index_in_block ${{raw: order}},
+        receipt.transaction_id ${{raw: order}}, receipt.output_index ${{raw: order}}
       LIMIT ${offset}, ${limit}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({id}) => id)
 
@@ -170,7 +171,7 @@ class QRC20Service extends Service {
           ]
         }
       ],
-      order: [['blockHeight', order], ['indexInBlock', order]],
+      order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order], ['outputIndex', order]],
       transaction: this.ctx.state.transaction
     })
 

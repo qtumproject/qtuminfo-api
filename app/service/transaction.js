@@ -167,7 +167,7 @@ class TransactionService extends Service {
           include: [{
             model: Contract,
             as: 'contract',
-            required: true,
+            required: false,
             attributes: ['addressString']
           }]
         }
@@ -358,31 +358,36 @@ class TransactionService extends Service {
               data: output.evmReceipt.senderData,
               chain: this.app.chain
             }).toString(),
-            gasUsed: output.evmReceipt.gasUsed,
-            contractAddress: output.evmReceipt.contract.addressString,
-            contractAddressHex: output.evmReceipt.contractAddress,
-            excepted: output.evmReceipt.excepted,
-            exceptedMessage: output.evmReceipt.exceptedMessage,
-            logs: eventLogs.filter(log => log.receiptId === output.evmReceipt._id).map(log => ({
-              address: log.contract.addressString,
-              addressHex: log.address,
-              topics: this.transformTopics(log),
-              data: log.data,
-              ...log.qrc20 ? {
-                qrc20: {
-                  name: log.qrc20.name,
-                  symbol: log.qrc20.symbol,
-                  decimals: log.qrc20.decimals
-                }
-              } : {},
-              ...log.qrc721 ? {
-                qrc721: {
-                  name: log.qrc721.name,
-                  symbol: log.qrc721.symbol
-                }
-              } : {}
-            }))
+            gasUsed: output.evmReceipt.gasUsed
           }
+          if (output.evmReceipt.contract) {
+            outputObject.evmReceipt.contractAddress = output.evmReceipt.contract.addressString
+            outputObject.evmReceipt.contractAddressHex = output.evmReceipt.contractAddress
+          } else {
+            outputObject.evmReceipt.contractAddress = output.evmReceipt.contractAddress.toString('hex')
+            outputObject.evmReceipt.contractAddressHex = output.evmReceipt.contractAddress
+          }
+          outputObject.evmReceipt.excepted = output.evmReceipt.excepted
+          outputObject.evmReceipt.exceptedMessage = output.evmReceipt.exceptedMessage
+          outputObject.evmReceipt.logs = eventLogs.filter(log => log.receiptId === output.evmReceipt._id).map(log => ({
+            address: log.contract.addressString,
+            addressHex: log.address,
+            topics: this.transformTopics(log),
+            data: log.data,
+            ...log.qrc20 ? {
+              qrc20: {
+                name: log.qrc20.name,
+                symbol: log.qrc20.symbol,
+                decimals: log.qrc20.decimals
+              }
+            } : {},
+            ...log.qrc721 ? {
+              qrc721: {
+                name: log.qrc721.name,
+                symbol: log.qrc721.symbol
+              }
+            } : {}
+          }))
         }
         return outputObject
       }),
@@ -477,7 +482,8 @@ class TransactionService extends Service {
   }
 
   async getMempoolTransactionAddresses(id) {
-    const {Address, Transaction, BalanceChange} = this.ctx.model
+    const {Address: RawAddress} = this.app.qtuminfo.lib
+    const {Address, Transaction, BalanceChange, EvmReceipt: EVMReceipt} = this.ctx.model
     let balanceChanges = await BalanceChange.findAll({
       attributes: [],
       include: [
@@ -497,7 +503,22 @@ class TransactionService extends Service {
       ],
       transaction: this.ctx.state.transaction
     })
-    return balanceChanges.map(item => item.address.string)
+    let receipts = await EVMReceipt.findAll({
+      attributes: ['senderType', 'senderData'],
+      include: [{
+        model: Transaction,
+        as: 'transaction',
+        required: true,
+        where: {id},
+        attributes: []
+      }],
+      transaction: this.ctx.transaction
+    })
+    let addresses = new Set(balanceChanges.map(item => item.address.string))
+    for (let receipt of receipts) {
+      addresses.add(new RawAddress({type: receipt.senderType, data: receipt.senderData, chain: this.app.chain}).toString())
+    }
+    return [...addresses]
   }
 
   async sendRawTransaction(data) {
