@@ -31,7 +31,7 @@ class StatisticsService extends Service {
       GROUP BY blockInterval
       ORDER BY blockInterval ASC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-    let total = this.app.blockchainInfo.height - 5001
+    let total = this.app.blockchainInfo.tip.height - 5001
     return result.map(({blockInterval, count}) => ({interval: blockInterval, count, percentage: count / total}))
   }
 

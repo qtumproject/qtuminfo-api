@@ -1,6 +1,13 @@
 const path = require('path')
 const Redis = require('ioredis')
 
+const redisConfig = {
+  host: 'localhost',
+  port: 6379,
+  password: '',
+  db: 0
+}
+
 exports.keys = 'qtuminfo-api'
 
 exports.security = {
@@ -9,30 +16,25 @@ exports.security = {
 
 exports.middleware = ['ratelimit']
 
+exports.redis = {
+  client: redisConfig
+}
+
 exports.ratelimit = {
-  db: new Redis({
-    host: 'localhost',
-    port: 6379,
-    db: 0
-  }),
+  db: new Redis(redisConfig),
   headers: {
     remaining: 'Rate-Limit-Remaining',
     reset: 'Rate-Limit-Reset',
     total: 'Rate-Limit-Total',
   },
   disableHeader: false,
-  idPrefix: 'qtuminfo-api-',
   errorMessage: 'Rate Limit Exceeded',
   duration: 10 * 60 * 1000,
   max: 10 * 60
 }
 
 exports.io = {
-  redis: {
-    host: 'localhost',
-    port: 6379,
-    db: 0
-  },
+  redis: redisConfig,
   namespace: {
     '/': {connectionMiddleware: ['connection']}
   }

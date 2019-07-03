@@ -19,19 +19,19 @@ module.exports = app => {
   app.messenger.on('update-daily-transactions', async () => {
     let ctx = app.createAnonymousContext()
     let dailyTransactions = await ctx.service.statistics.getDailyTransactions()
-    app.messenger.sendToAgent('daily-transactions', dailyTransactions)
+    await app.redis.hset(app.name, 'daily-transactions', JSON.stringify(dailyTransactions))
   })
 
   app.messenger.on('update-block-interval', async () => {
     let ctx = app.createAnonymousContext()
     let blockInterval = await ctx.service.statistics.getBlockIntervalStatistics()
-    app.messenger.sendToAgent('block-interval', blockInterval)
+    await app.redis.hset(app.name, 'block-interval', JSON.stringify(blockInterval))
   })
 
   app.messenger.on('update-address-growth', async () => {
     let ctx = app.createAnonymousContext()
     let addressGrowth = await ctx.service.statistics.getAddressGrowth()
-    app.messenger.sendToAgent('address-growth', addressGrowth)
+    await app.redis.hset(app.name, 'address-growth', JSON.stringify(addressGrowth))
   })
 
   app.messenger.on('update-stakeweight', async () => {

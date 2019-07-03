@@ -1,12 +1,9 @@
-const uuidv4 = require('uuid/v4')
 const {Controller} = require('egg')
 
 class StatisticsController extends Controller {
   async dailyTransactions() {
     const {app, ctx} = this
-    let nonce = uuidv4()
-    app.messenger.sendToAgent('fetch-daily-transactions', nonce)
-    let dailyTransactions = await new Promise(resolve => app.messenger.once(`daily-transactions-${nonce}`, resolve))
+    let dailyTransactions = JSON.parse(await app.redis.hget(app.name, 'daily-transactions') || '[]')
     ctx.body = dailyTransactions.map(({timestamp, transactionsCount, contractTransactionsCount}) => ({
       time: new Date(timestamp * 1000),
       transactionCount: transactionsCount,
@@ -16,17 +13,13 @@ class StatisticsController extends Controller {
 
   async blockInterval() {
     const {app, ctx} = this
-    let nonce = uuidv4()
-    app.messenger.sendToAgent('fetch-block-interval', nonce)
-    let blockInterval = await new Promise(resolve => app.messenger.once(`block-interval-${nonce}`, resolve))
+    let blockInterval = JSON.parse(await app.redis.hget(app.name, 'block-interval') || '[]')
     ctx.body = blockInterval
   }
 
   async addressGrowth() {
     const {app, ctx} = this
-    let nonce = uuidv4()
-    app.messenger.sendToAgent('fetch-address-growth', nonce)
-    let addressGrowth = await new Promise(resolve => app.messenger.once(`address-growth-${nonce}`, resolve))
+    let addressGrowth = JSON.parse(await app.redis.hget(app.name, 'address-growth') || '[]')
     ctx.body = addressGrowth.map(({timestamp, count}) => ({
       time: new Date(timestamp * 1000),
       addresses: count

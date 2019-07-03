@@ -5,9 +5,6 @@ module.exports = function(agent) {
   let stakeWeight = null
   let feeRate = null
   let dgpInfo = null
-  let dailyTransactions = []
-  let blockInterval = []
-  let addressGrowth = []
 
   agent.messenger.on('egg-ready', () => {
     let io = SocketClient(`http://localhost:${agent.config.qtuminfo.port}`)
@@ -75,15 +72,6 @@ module.exports = function(agent) {
     agent.messenger.sendToApp('dgpinfo', dgpInfo)
     agent.messenger.sendRandom('socket/dgpinfo', dgpInfo)
   })
-  agent.messenger.on('daily-transactions', result => {
-    dailyTransactions = result
-  })
-  agent.messenger.on('block-interval', result => {
-    blockInterval = result
-  })
-  agent.messenger.on('address-growth', result => {
-    addressGrowth = result
-  })
 
   agent.messenger.on('egg-ready', () => {
     let interval = setInterval(() => {
@@ -96,15 +84,5 @@ module.exports = function(agent) {
     agent.messenger.sendRandom('update-stakeweight')
     fetchFeeRate()
     agent.messenger.sendRandom('update-dgpinfo')
-  })
-
-  agent.messenger.on('fetch-daily-transactions', nonce => {
-    agent.messenger.sendToApp(`daily-transactions-${nonce}`, dailyTransactions)
-  })
-  agent.messenger.on('fetch-block-interval', nonce => {
-    agent.messenger.sendToApp(`block-interval-${nonce}`, blockInterval)
-  })
-  agent.messenger.on('fetch-address-growth', nonce => {
-    agent.messenger.sendToApp(`address-growth-${nonce}`, addressGrowth)
   })
 }

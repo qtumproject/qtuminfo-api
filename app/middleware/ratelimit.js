@@ -1,7 +1,7 @@
 const ratelimit = require('koa-ratelimit')
 
-module.exports = options => ratelimit({
+module.exports = (options, app) => ratelimit({
   ...options,
-  id: ctx => options.idPrefix + (ctx.get('x-forwarded-for') || ctx.ip),
+  id: ctx => `${app.name}-${ctx.get('x-forwarded-for') || ctx.ip}`,
   whitelist: options.whitelist && options.whitelist.includes(ctx => ctx.get('application-id'))
 })
