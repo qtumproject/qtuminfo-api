@@ -61,6 +61,11 @@ module.exports = app => {
     controller.address.transactions
   )
   router.get(
+    '/address/:address/basic-txs',
+    addressMiddleware, paginationMiddleware,
+    controller.address.basicTransactions
+  )
+  router.get(
     '/address/:address/utxo',
     addressMiddleware,
     controller.address.utxo

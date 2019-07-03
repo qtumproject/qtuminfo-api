@@ -79,6 +79,27 @@ class AddressController extends Controller {
     }
   }
 
+  async basicTransactions() {
+    let {ctx} = this
+    let {address} = ctx.state
+    let {totalCount, transactions} = await ctx.service.address.getAddressBasicTransactions(address.addressIds)
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(transaction => ({
+        id: transaction.id.toString('hex'),
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash && transaction.blockHash.toString('hex'),
+        timetamp: transaction.timetamp,
+        confirmations: transaction.confirmations,
+        amount: transaction.amount.toString(),
+        inputValue: transaction.inputValue.toString(),
+        outputValue: transaction.outputValue.toString(),
+        refundValue: transaction.refundValue.toString(),
+        fees: transaction.fees.toString()
+      }))
+    }
+  }
+
   async utxo() {
     let {ctx} = this
     let utxos = await ctx.service.address.getUTXO(ctx.state.address.addressIds)

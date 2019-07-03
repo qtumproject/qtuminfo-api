@@ -712,6 +712,100 @@ class TransactionService extends Service {
       return result
     }
   }
+
+  async getBasicTransaction(transactionId) {
+    const {Header, Transaction, TransactionOutput, TransactionInput, GasRefund, where, col} = this.ctx.model
+
+    let transaction = await Transaction.findOne({
+      where: {_id: transactionId},
+      attributes: ['id', 'blockHeight'],
+      include: [{
+        model: Header,
+        as: 'header',
+        required: false,
+        attributes: ['hash', 'timestamp']
+      }],
+      transaction: this.ctx.state.transaction
+    })
+    if (!transaction) {
+      return null
+    }
+
+    let inputs = await TransactionInput.findAll({
+      where: {transactionId},
+      attributes: ['value', 'addressId'],
+      transaction: this.ctx.state.transaction
+    })
+    let outputs = await TransactionOutput.findAll({
+      where: {transactionId},
+      attributes: ['value', 'addressId'],
+      include: [
+        {
+          model: GasRefund,
+          as: 'refund',
+          on: {
+            transactionId: where(col('refund.transaction_id'), '=', transactionId),
+            outputIndex: where(col('refund.output_index'), '=', col('transaction_output.output_index'))
+          },
+          required: false,
+          attributes: [],
+          include: [{
+            model: TransactionOutput,
+            as: 'refundTo',
+            on: {
+              transactionId: where(col('refund->refundTo.transaction_id'), '=', col('refund.refund_id')),
+              outputIndex: where(col('refund->refundTo.output_index'), '=', col('refund.refund_index'))
+            },
+            required: true,
+            attributes: ['value']
+          }]
+        },
+        {
+          model: GasRefund,
+          as: 'refundTo',
+          on: {
+            transactionId: where(col('refundTo.refund_id'), '=', transactionId),
+            outputIndex: where(col('refundTo.refund_index'), '=', col('transaction_output.output_index'))
+          },
+          required: false,
+          attributes: []
+        }
+      ],
+      transaction: this.ctx.state.transaction
+    })
+
+    let result = {id: transaction.id}
+    if (transaction.blockHeight !== 0xffffffff) {
+      result.blockHeight = transaction.blockHeight
+      result.blockHash = transaction.header.hash
+      result.timestamp = transaction.header.timestamp
+    }
+    let inputValue = inputs.map(input => input.value).reduce((x, y) => x + y)
+    let outputValue = outputs.map(output => output.value).reduce((x, y) => x + y)
+    let refundValue = outputs
+      .filter(output => output.refund)
+      .map(output => output.refund.refundTo.value)
+      .reduce((x, y) => x + y, 0n)
+    let refundToValue = outputs
+      .filter(output => output.refundTo)
+      .map(output => output.value)
+      .reduce((x, y) => x + y, 0n)
+
+    return {
+      id: transaction.id,
+      inputs: inputs.map(input => ({value: input.value, addressId: input.addressId})),
+      outputs: outputs.map(output => ({value: output.value, addressId: output.addressId})),
+      ...transaction.blockHeight === 0xffffffff ? {} : {
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.header.hash,
+        timestamp: transaction.header.timestamp
+      },
+      inputValue,
+      outputValue,
+      refundValue,
+      fees: inputValue - outputValue - refundValue + refundToValue,
+    }
+  }
 }
 
 function isCoinbase(input) {

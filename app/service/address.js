@@ -114,6 +114,65 @@ class AddressService extends Service {
     return {totalCount, transactions}
   }
 
+  async getAddressBasicTransactionCount(addressIds) {
+    const {BalanceChange} = this.ctx.model
+    const {in: $in} = this.app.Sequelize.Op
+    return await BalanceChange.count({
+      where: {addressId: {[$in]: addressIds}},
+      distinct: true,
+      col: 'transactionId',
+      transaction: this.ctx.transaction
+    })
+  }
+
+  async getAddressBasicTransactions(addressIds) {
+    const db = this.ctx.model
+    const {sql} = this.ctx.helper
+    let {limit, offset, reversed = true} = this.ctx.state.pagination
+    let order = reversed ? 'DESC' : 'ASC'
+    let totalCount = await this.getAddressBasicTransactionCount(addressIds)
+    let transactionIds = []
+    if (addressIds.length === 1) {
+      transactionIds = (await db.query(sql`
+        SELECT transaction_id AS _id
+        FROM balance_change
+        WHERE address_id = ${addressIds[0]}
+        ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, transaction_id ${{raw: order}}
+        LIMIT ${offset}, ${limit}
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({_id}) => _id)
+    } else {
+      transactionIds = (await db.query(sql`
+        SELECT _id FROM (
+          SELECT MIN(block_height) AS block_height, MIN(index_in_block) AS index_in_block, transaction_id AS _id
+          FROM balance_change
+          WHERE address_id IN ${addressIds}
+          GROUP BY _id
+        ) list
+        ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, _id ${{raw: order}}
+        LIMIT ${offset}, ${limit}
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({_id}) => _id)
+    }
+
+    let transactions = await Promise.all(transactionIds.map(async transactionId => {
+      let transaction = await this.ctx.service.transaction.getBasicTransaction(transactionId)
+      let amount = transaction.outputs.filter(output => addressIds.includes(output.addressId)).map(output => output.value)
+        - transaction.inputs.filter(input => addressIds.includes(input.addressId)).map(input => input.value)
+      return {
+        id: transaction.id,
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash,
+        timetamp: transaction.timetamp,
+        confirmations: transaction.blockHeight == null ? 0 : this.app.blockchainInfo.tip.height - transaction.blockHeight + 1,
+        amount,
+        inputValue: transaction.inputValue,
+        outputValue: transaction.outputValue,
+        refundValue: transaction.refundValue,
+        fees: transaction.fees
+      }
+    }))
+    return {totalCount, transactions}
+  }
+
   async getUTXO(ids) {
     const {Address, Transaction, TransactionOutput} = this.ctx.model
     const {in: $in, gt: $gt} = this.app.Sequelize.Op
