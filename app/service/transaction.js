@@ -372,7 +372,7 @@ class TransactionService extends Service {
           outputObject.evmReceipt.logs = eventLogs.filter(log => log.receiptId === output.evmReceipt._id).map(log => ({
             address: log.contract.addressString,
             addressHex: log.address,
-            topics: this.transformTopics(log),
+            topics: transformTopics(log),
             data: log.data,
             ...log.qrc20 ? {
               qrc20: {
@@ -557,8 +557,8 @@ class TransactionService extends Service {
       },
       inputs,
       outputs,
-      isCoinbase: this.isCoinbase(transaction.inputs[0]),
-      isCoinstake: this.isCoinstake(transaction),
+      isCoinbase: isCoinbase(transaction.inputs[0]),
+      isCoinstake: isCoinstake(transaction),
       blockHeight: transaction.block && transaction.block.height,
       confirmations,
       timestamp: transaction.block && transaction.block.timestamp,
@@ -595,7 +595,7 @@ class TransactionService extends Service {
     let scriptSig = InputScript.fromBuffer(input.scriptSig, {
       scriptPubKey: OutputScript.fromBuffer(input.scriptPubKey || Buffer.alloc(0)),
       witness: input.witness,
-      isCoinbase: this.isCoinbase(input)
+      isCoinbase: isCoinbase(input)
     })
     let result = {}
     if (scriptSig.type === InputScript.COINBASE) {
@@ -712,32 +712,32 @@ class TransactionService extends Service {
       return result
     }
   }
+}
 
-  isCoinbase(input) {
-    return Buffer.compare(input.prevTxId, Buffer.alloc(32)) === 0 && input.outputIndex === 0xffffffff
-  }
+function isCoinbase(input) {
+  return Buffer.compare(input.prevTxId, Buffer.alloc(32)) === 0 && input.outputIndex === 0xffffffff
+}
 
-  isCoinstake(transaction) {
-    return transaction.inputs.length > 0 && Buffer.compare(transaction.inputs[0].prevTxId, Buffer.alloc(32)) !== 0
-      && transaction.outputs.length >= 2 && transaction.outputs[0].value === 0n && transaction.outputs[0].scriptPubKey.length === 0
-  }
+function isCoinstake(transaction) {
+  return transaction.inputs.length > 0 && Buffer.compare(transaction.inputs[0].prevTxId, Buffer.alloc(32)) !== 0
+    && transaction.outputs.length >= 2 && transaction.outputs[0].value === 0n && transaction.outputs[0].scriptPubKey.length === 0
+}
 
-  transformTopics(log) {
-    let result = []
-    if (log.topic1) {
-      result.push(log.topic1)
-    }
-    if (log.topic2) {
-      result.push(log.topic2)
-    }
-    if (log.topic3) {
-      result.push(log.topic3)
-    }
-    if (log.topic4) {
-      result.push(log.topic4)
-    }
-    return result
+function transformTopics(log) {
+  let result = []
+  if (log.topic1) {
+    result.push(log.topic1)
   }
+  if (log.topic2) {
+    result.push(log.topic2)
+  }
+  if (log.topic3) {
+    result.push(log.topic3)
+  }
+  if (log.topic4) {
+    result.push(log.topic4)
+  }
+  return result
 }
 
 module.exports = TransactionService
