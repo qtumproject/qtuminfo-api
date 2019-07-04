@@ -64,7 +64,7 @@ module.exports = app => {
     Transaction.hasMany(EVMReceipt, {as: 'evmReceipts', foreignKey: 'transactionId'})
     EVMReceipt.belongsTo(Transaction, {as: 'transaction', foreignKey: 'transactionId'})
     TransactionOutput.hasOne(EVMReceipt, {as: 'evmReceipt', foreignKey: 'transactionId'})
-    EVMReceipt.belongsTo(TransactionOutput, {as: 'transactionOutput', foreignKey: 'transactionId'})
+    EVMReceipt.belongsTo(TransactionOutput, {as: 'output', foreignKey: 'transactionId'})
   }
 
   return EVMReceipt

@@ -512,7 +512,7 @@ class TransactionService extends Service {
         where: {id},
         attributes: []
       }],
-      transaction: this.ctx.transaction
+      transaction: this.ctx.state.transaction
     })
     let addresses = new Set(balanceChanges.map(item => item.address.string))
     for (let receipt of receipts) {
@@ -804,6 +804,116 @@ class TransactionService extends Service {
       outputValue,
       refundValue,
       fees: inputValue - outputValue - refundValue + refundToValue,
+    }
+  }
+
+  async getContractTransaction(receiptId) {
+    const {Address: RawAddress, OutputScript} = this.app.qtuminfo.lib
+    const {
+      Header, Address, Transaction, TransactionOutput,
+      EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, Contract,
+      where, col
+    } = this.ctx.model
+    let receipt = await EVMReceipt.findOne({
+      where: {_id: receiptId},
+      include: [
+        {
+          model: Header,
+          as: 'header',
+          required: false,
+          attributes: ['hash', 'timestamp']
+        },
+        {
+          model: Transaction,
+          as: 'transaction',
+          required: true,
+          attributes: ['id']
+        },
+        {
+          model: TransactionOutput,
+          as: 'output',
+          on: {
+            transactionId: where(col('output.transaction_id'), '=', col('evm_receipt.transaction_id')),
+            outputIndex: where(col('output.output_index'), '=', col('evm_receipt.output_index'))
+          },
+          required: true,
+          attributes: ['scriptPubKey', 'value'],
+          include: [{
+            model: Address,
+            as: 'address',
+            required: false,
+            attributes: ['type', 'string'],
+            include: [{
+              model: Contract,
+              as: 'contract',
+              required: false,
+              attributes: ['address', 'addressString']
+            }]
+          }]
+        }, {
+          model: Contract,
+          as: 'contract',
+          required: false,
+          attributes: ['addressString']
+        }
+      ],
+      transaction: this.ctx.state.transaction
+    })
+    if (!receipt) {
+      return null
+    }
+    let logs = await EVMReceiptLog.findAll({
+      where: {receiptId},
+      include: [{
+        model: Contract,
+        as: 'contract',
+        required: true,
+        attributes: ['addressString']
+      }],
+      order: [['logIndex', 'ASC']],
+      transaction: this.ctx.state.transaction
+    })
+
+    let scriptPubKey = OutputScript.fromBuffer(receipt.output.scriptPubKey)
+    let output = {
+      scriptPubKey,
+      value: receipt.output.value
+    }
+    if (receipt.output.address.contract) {
+      output.address = receipt.output.address.contract.addressString
+      output.addressHex = receipt.output.address.contract.address
+    } else {
+      let address = RawAddress.fromString(receipt.output.address.string, this.app.chain)
+      output.address = receipt.output.address.string
+      output.addressHex = address.data
+      output.isInvalidContract = true
+    }
+
+    return {
+      transactionId: receipt.transaction.id,
+      outputIndex: receipt.outputIndex,
+      ...receipt.blockHeight === 0xffffffff ? {} : {
+        blockHeight: receipt.blockHeight,
+        blockHash: receipt.header.hash,
+        timestamp: receipt.header.timestamp
+      },
+      output,
+      sender: new RawAddress({
+        type: receipt.senderType,
+        data: receipt.senderData,
+        chain: this.app.chain
+      }),
+      gasUsed: receipt.gasUsed,
+      contractAddress: receipt.contract ? receipt.contract.addressString : receipt.contractAddress.toString('hex'),
+      contractAddressHex: receipt.contractAddress,
+      excepted: receipt.excepted,
+      exceptedMessage: receipt.exceptedMessage,
+      evmLogs: logs.map(log => ({
+        address: log.contract.addressString,
+        addressHex: log.address,
+        topics: transformTopics(log),
+        data: log.data
+      }))
     }
   }
 }

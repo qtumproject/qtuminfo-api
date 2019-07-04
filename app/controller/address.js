@@ -81,8 +81,7 @@ class AddressController extends Controller {
 
   async basicTransactions() {
     let {ctx} = this
-    let {address} = ctx.state
-    let {totalCount, transactions} = await ctx.service.address.getAddressBasicTransactions(address.addressIds)
+    let {totalCount, transactions} = await ctx.service.address.getAddressBasicTransactions(ctx.state.address.addressIds)
     ctx.body = {
       totalCount,
       transactions: transactions.map(transaction => ({
@@ -96,6 +95,43 @@ class AddressController extends Controller {
         outputValue: transaction.outputValue.toString(),
         refundValue: transaction.refundValue.toString(),
         fees: transaction.fees.toString()
+      }))
+    }
+  }
+
+  async contractTransactions() {
+    let {ctx} = this
+    let {address, contract} = ctx.state
+    let {totalCount, transactions} = await ctx.service.address.getAddressContractTransactions(address.rawAddresses, contract)
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(transaction => ({
+        transactionId: transaction.transactionId.toString('hex'),
+        outputIndex: transaction.outputIndex,
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash && transaction.blockHash.toString('hex'),
+        timetamp: transaction.timetamp,
+        confirmations: transaction.confirmations,
+        output: {
+          type: transaction.output.scriptPubKey.type,
+          hex: transaction.output.scriptPubKey.toBuffer().toString('hex'),
+          asm: transaction.output.scriptPubKey.toString(),
+          value: transaction.output.value.toString(),
+          address: transaction.output.address,
+          addressHex: transaction.output.addressHex.toString('hex')
+        },
+        sender: transaction.sender.toString(),
+        gasUsed: transaction.gasUsed,
+        contractAddress: transaction.contractAddress,
+        contractAddressHex: transaction.contractAddressHex.toString('hex'),
+        excepted: transaction.excepted,
+        exceptedMessage: transaction.exceptedMessage,
+        evmLogs: transaction.evmLogs.map(log => ({
+          address: log.address,
+          addressHex: log.addressHex.toString('hex'),
+          topics: log.topics.map(topic => topic.toString('hex')),
+          data: log.data.toString('hex')
+        }))
       }))
     }
   }

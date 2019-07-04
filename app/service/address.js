@@ -157,18 +157,53 @@ class AddressService extends Service {
       let transaction = await this.ctx.service.transaction.getBasicTransaction(transactionId)
       let amount = transaction.outputs.filter(output => addressIds.includes(output.addressId)).map(output => output.value)
         - transaction.inputs.filter(input => addressIds.includes(input.addressId)).map(input => input.value)
-      return {
-        id: transaction.id,
-        blockHeight: transaction.blockHeight,
-        blockHash: transaction.blockHash,
-        timetamp: transaction.timetamp,
+      return Object.assign(transaction, {
         confirmations: transaction.blockHeight == null ? 0 : this.app.blockchainInfo.tip.height - transaction.blockHeight + 1,
-        amount,
-        inputValue: transaction.inputValue,
-        outputValue: transaction.outputValue,
-        refundValue: transaction.refundValue,
-        fees: transaction.fees
-      }
+        amount
+      })
+    }))
+    return {totalCount, transactions}
+  }
+
+  async getAddressContractTransactionCount(rawAddresses, contract) {
+    const db = this.ctx.model
+    const {Address} = db
+    const {sql} = this.ctx.helper
+    let contractFilter = ''
+    if (contract) {
+      contractFilter = sql`AND contract_address = ${contract.contractAddress}`
+    }
+    let [{count}] = await db.query(sql`
+      SELECT COUNT(DISTINCT(_id)) AS count FROM evm_receipt
+      WHERE (sender_type, sender_data) IN ${rawAddresses.map(address => [Address.parseType(address.type), address.data])}
+        ${{raw: contractFilter}}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    return count
+  }
+
+  async getAddressContractTransactions(rawAddresses, contract) {
+    const db = this.ctx.model
+    const {Address} = db
+    const {sql} = this.ctx.helper
+    let {limit, offset, reversed = true} = this.ctx.state.pagination
+    let order = reversed ? 'DESC' : 'ASC'
+    let contractFilter = ''
+    if (contract) {
+      contractFilter = sql`AND contract_address = ${contract.contractAddress}`
+    }
+    let totalCount = await this.getAddressContractTransactionCount(rawAddresses, contract)
+    let receiptIds = (await db.query(sql`
+      SELECT _id FROM evm_receipt
+      WHERE (sender_type, sender_data) IN ${rawAddresses.map(address => [Address.parseType(address.type), address.data])}
+        ${{raw: contractFilter}}
+      ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, transaction_id ${{raw: order}}, output_index ${{raw: order}}
+      LIMIT ${offset}, ${limit}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({_id}) => _id)
+    let transactions = await Promise.all(receiptIds.map(async receiptId => {
+      let transaction = await this.ctx.service.transaction.getContractTransaction(receiptId)
+      return Object.assign(transaction, {
+        confirmations: transaction.blockHeight == null ? 0 : this.app.blockchainInfo.tip.height - transaction.blockHeight + 1
+      })
     }))
     return {totalCount, transactions}
   }
