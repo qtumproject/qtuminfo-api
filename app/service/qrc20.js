@@ -6,12 +6,11 @@ class QRC20Service extends Service {
     const {sql} = this.ctx.helper
     let {limit, offset} = this.ctx.state.pagination
 
-    let result = await db.query(sql`
+    let [{totalCount}] = await db.query(sql`
       SELECT COUNT(DISTINCT(qrc20_balance.contract_address)) AS count FROM qrc20_balance
       INNER JOIN qrc20 USING (contract_address)
       WHERE balance != ${Buffer.alloc(32)}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-    let totalCount = result[0].count || 0
     let list = await db.query(sql`
       SELECT
         contract.address_string AS address, contract.address AS addressHex,

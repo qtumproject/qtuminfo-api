@@ -153,7 +153,7 @@ class BalanceService extends Service {
     } else {
       let havingFilter = nonZero ? 'SUM(value) != 0' : null
       if (havingFilter) {
-        let result = await db.query(sql`
+        let [{count}] = await db.query(sql`
           SELECT COUNT(*) AS count FROM (
             SELECT transaction_id FROM balance_change
             WHERE address_id IN ${ids} AND block_height > 0
@@ -161,7 +161,7 @@ class BalanceService extends Service {
             HAVING ${{raw: havingFilter}}
           ) list
         `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-        totalCount = result[0].count || 0
+        totalCount = count
       } else {
         totalCount = await BalanceChange.count({
           where: {addressId: {[$in]: ids}, blockHeight: {[$gt]: 0}},

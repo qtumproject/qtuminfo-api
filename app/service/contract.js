@@ -116,7 +116,7 @@ class ContractService extends Service {
     const db = this.ctx.model
     let {sql} = this.ctx.helper
     let topic = Buffer.concat([Buffer.alloc(12), contractAddress])
-    let result = await db.query(sql`
+    let [{count}] = await db.query(sql`
       SELECT COUNT(*) AS count FROM (
         SELECT transaction_id FROM balance_change
         WHERE address_id IN ${addressIds} AND ${this.ctx.service.block.getRawBlockFilter()}
@@ -140,7 +140,7 @@ class ContractService extends Service {
           )
       ) list
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-    return result[0].count || 0
+    return count
   }
 
   async getContractTransactions(contractAddress, addressIds) {
