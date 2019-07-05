@@ -1,6 +1,7 @@
 module.exports = app => {
   const {router, controller, io, middleware} = app
   const addressMiddleware = middleware.address()
+  const blockFilterMiddleware = middleware.blockFilter()
   const contractMiddleware = middleware.contract()
   const paginationMiddleware = middleware.pagination()
 
@@ -57,17 +58,17 @@ module.exports = app => {
   )
   router.get(
     '/address/:address/txs',
-    addressMiddleware, paginationMiddleware,
+    addressMiddleware, paginationMiddleware, blockFilterMiddleware,
     controller.address.transactions
   )
   router.get(
     '/address/:address/basic-txs',
-    addressMiddleware, paginationMiddleware,
+    addressMiddleware, paginationMiddleware, blockFilterMiddleware,
     controller.address.basicTransactions
   )
   router.get(
     '/address/:address/contract-txs',
-    addressMiddleware, paginationMiddleware,
+    addressMiddleware, paginationMiddleware, blockFilterMiddleware,
     controller.address.contractTransactions
   )
   router.get(
@@ -90,6 +91,11 @@ module.exports = app => {
     addressMiddleware, paginationMiddleware,
     controller.address.qrc20BalanceHistory
   )
+  router.get(
+    '/address/:address/qrc20-balance-history/:token',
+    addressMiddleware, middleware.contract('token'), paginationMiddleware,
+    controller.address.qrc20BalanceHistory
+  )
 
   router.get(
     '/contract/:contract',
@@ -98,7 +104,7 @@ module.exports = app => {
   )
   router.get(
     '/contract/:contract/txs',
-    contractMiddleware, paginationMiddleware,
+    contractMiddleware, paginationMiddleware, blockFilterMiddleware,
     controller.contract.transactions
   )
   router.get(
@@ -112,13 +118,18 @@ module.exports = app => {
     controller.contract.qrc20BalanceHistory
   )
   router.get(
+    '/contract/:contract/qrc20-balance-history/:token',
+    contractMiddleware, middleware.contract('token'), paginationMiddleware,
+    controller.contract.qrc20BalanceHistory
+  )
+  router.get(
     '/contract/:contract/call',
     contractMiddleware,
     controller.contract.callContract
   )
   router.get(
     '/searchlogs',
-    paginationMiddleware,
+    paginationMiddleware, blockFilterMiddleware,
     controller.contract.searchLogs
   )
   router.get(

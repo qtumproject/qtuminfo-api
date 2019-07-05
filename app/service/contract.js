@@ -118,15 +118,19 @@ class ContractService extends Service {
     let topic = Buffer.concat([Buffer.alloc(12), contractAddress])
     let result = await db.query(sql`
       SELECT COUNT(*) AS count FROM (
-        SELECT transaction_id FROM balance_change WHERE address_id IN ${addressIds}
+        SELECT transaction_id FROM balance_change
+        WHERE address_id IN ${addressIds} AND ${this.ctx.service.block.getRawBlockFilter()}
         UNION
-        SELECT transaction_id FROM evm_receipt WHERE contract_address = ${contractAddress}
+        SELECT transaction_id FROM evm_receipt
+        WHERE contract_address = ${contractAddress} AND ${this.ctx.service.block.getRawBlockFilter()}
         UNION
         SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log
         WHERE log.receipt_id = receipt._id AND log.address = ${contractAddress}
+          AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
         UNION
         SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log, contract
         WHERE log.receipt_id = receipt._id
+          AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
           AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
           AND log.topic1 = ${TransferABI.id}
           AND (log.topic2 = ${topic} OR log.topic3 = ${topic})
@@ -150,17 +154,21 @@ class ContractService extends Service {
     let transactions = await db.query(sql`
       SELECT tx.id AS id FROM (
         SELECT _id FROM (
-          SELECT block_height, index_in_block, transaction_id AS _id FROM balance_change WHERE address_id IN ${addressIds}
+          SELECT block_height, index_in_block, transaction_id AS _id FROM balance_change
+          WHERE address_id IN ${addressIds} AND ${this.ctx.service.block.getRawBlockFilter()}
           UNION
-          SELECT block_height, index_in_block, transaction_id AS _id FROM evm_receipt WHERE contract_address = ${contractAddress}
+          SELECT block_height, index_in_block, transaction_id AS _id FROM evm_receipt
+          WHERE contract_address = ${contractAddress} AND ${this.ctx.service.block.getRawBlockFilter()}
           UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
           FROM evm_receipt receipt, evm_receipt_log log
           WHERE log.receipt_id = receipt._id AND log.address = ${contractAddress}
+            AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
           UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
           FROM evm_receipt receipt, evm_receipt_log log, contract
           WHERE log.receipt_id = receipt._id
+            AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
             AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
             AND log.topic1 = ${TransferABI.id}
             AND (log.topic2 = ${topic} OR log.topic3 = ${topic})
@@ -186,7 +194,7 @@ class ContractService extends Service {
     )
   }
 
-  async searchLogs({fromBlock, toBlock, contract, topic1, topic2, topic3, topic4} = {}) {
+  async searchLogs({contract, topic1, topic2, topic3, topic4} = {}) {
     const {Address} = this.app.qtuminfo.lib
     const db = this.ctx.model
     const {Header, Transaction, EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, Contract} = db
@@ -194,14 +202,7 @@ class ContractService extends Service {
     const {sql} = this.ctx.helper
     let {limit, offset} = this.ctx.state.pagination
 
-    let blockFilter = 'TRUE'
-    if (fromBlock != null && toBlock != null) {
-      blockFilter = sql`receipt.block_height BETWEEN ${fromBlock} AND ${toBlock}`
-    } else if (fromBlock != null) {
-      blockFilter = sql`receipt.block_height >= ${fromBlock}`
-    } else if (toBlock != null) {
-      blockFilter = sql`receipt.block_height <= ${toBlock}`
-    }
+    let blockFilter = this.ctx.service.getRawBlockFilter('receipt.block_height')
     let contractFilter = contract ? sql`log.address = ${contract}` : 'TRUE'
     let topic1Filter = topic1 ? sql`log.topic1 = ${topic1}` : 'TRUE'
     let topic2Filter = topic2 ? sql`log.topic2 = ${topic2}` : 'TRUE'

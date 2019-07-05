@@ -345,6 +345,34 @@ class BlockService extends Service {
     }
     return result
   }
+
+  getBlockFilter(category = 'blockHeight') {
+    const {gte: $gte, lte: $lte, between: $between} = this.app.Sequelize.Op
+    let {fromBlock, toBlock} = this.ctx.state
+    let blockFilter = null
+    if (fromBlock != null && toBlock != null) {
+      blockFilter = {[$between]: [fromBlock, toBlock]}
+    } else if (fromBlock != null) {
+      blockFilter = {[$gte]: fromBlock}
+    } else if (toBlock != null) {
+      blockFilter = {[$lte]: toBlock}
+    }
+    return blockFilter ? {[category]: blockFilter} : {}
+  }
+
+  getRawBlockFilter(category = 'block_height') {
+    const {sql} = this.ctx.helper
+    let {fromBlock, toBlock} = this.ctx.state
+    let blockFilter = 'TRUE'
+    if (fromBlock != null && toBlock != null) {
+      blockFilter = sql`${{raw: category}} BETWEEN ${fromBlock} AND ${toBlock}`
+    } else if (fromBlock != null) {
+      blockFilter = sql`${{raw: category}} >= ${fromBlock}`
+    } else if (toBlock != null) {
+      blockFilter = sql`${{raw: category}} <= ${toBlock}`
+    }
+    return {raw: blockFilter}
+  }
 }
 
 module.exports = BlockService

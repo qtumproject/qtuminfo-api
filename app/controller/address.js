@@ -172,10 +172,22 @@ class AddressController extends Controller {
   async qrc20BalanceHistory() {
     const {Address} = this.app.qtuminfo.lib
     let {ctx} = this
+    let tokenAddress = null
+    if (ctx.state.contract) {
+      if (ctx.state.contract.type === 'qrc20') {
+        tokenAddress = ctx.state.contract.contractAddress
+      } else {
+        ctx.body = {
+          totalCount: 0,
+          transactions: []
+        }
+        return
+      }
+    }
     let hexAddresses = ctx.state.address.rawAddresses
       .filter(address => address.type === Address.PAY_TO_PUBLIC_KEY_HASH)
       .map(address => address.data)
-    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory(hexAddresses, ctx.query.token)
+    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory(hexAddresses, tokenAddress)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({

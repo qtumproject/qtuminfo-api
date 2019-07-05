@@ -1,5 +1,5 @@
-module.exports = () => async function contract(ctx, next) {
-  ctx.assert(ctx.params.contract, 404)
+module.exports = (paramName = 'contract') => async function contract(ctx, next) {
+  ctx.assert(ctx.params[paramName], 404)
   const {Address: RawAddress} = ctx.app.qtuminfo.lib
   const chain = ctx.app.chain
   const {Address, Contract} = ctx.model
@@ -8,15 +8,15 @@ module.exports = () => async function contract(ctx, next) {
   let contract = {}
   let rawAddress
   try {
-    rawAddress = RawAddress.fromString(ctx.params.contract, chain)
+    rawAddress = RawAddress.fromString(ctx.params[paramName], chain)
   } catch (err) {
     ctx.throw(400)
   }
   let filter
   if (rawAddress.type === RawAddress.CONTRACT) {
-    filter = {address: Buffer.from(ctx.params.contract, 'hex')}
+    filter = {address: Buffer.from(ctx.params[paramName], 'hex')}
   } else if (rawAddress.type === RawAddress.EVM_CONTRACT) {
-    filter = {addressString: ctx.params.contract}
+    filter = {addressString: ctx.params[paramName]}
   } else {
     ctx.throw(400)
   }
@@ -40,6 +40,6 @@ module.exports = () => async function contract(ctx, next) {
     transaction: ctx.state.transaction
   })
   contract.addressIds = addressList.map(address => address._id)
-  ctx.state.contract = contract
+  ctx.state[paramName] = contract
   await next()
 }

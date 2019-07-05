@@ -82,7 +82,19 @@ class ContractController extends Controller {
 
   async qrc20BalanceHistory() {
     let {ctx} = this
-    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory([ctx.state.contract.contractAddress], ctx.query.token)
+    let tokenAddress = null
+    if (ctx.state.contract) {
+      if (ctx.state.contract.type === 'qrc20') {
+        tokenAddress = ctx.state.contract.contractAddress
+      } else {
+        ctx.body = {
+          totalCount: 0,
+          transactions: []
+        }
+        return
+      }
+    }
+    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory([ctx.state.contract.contractAddress], tokenAddress)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({
@@ -126,21 +138,7 @@ class ContractController extends Controller {
 
   async searchLogs() {
     let {ctx} = this
-    let {fromBlock, toBlock, contract, topic1, topic2, topic3, topic4} = this.ctx.query
-    if (fromBlock != null) {
-      if (/^(0|[1-9]\d{0,9})$/.test(fromBlock)) {
-        fromBlock = Number.parseInt(fromBlock)
-      } else {
-        ctx.throw(400)
-      }
-    }
-    if (toBlock != null) {
-      if (/^(0|[1-9]\d{0,9})$/.test(toBlock)) {
-        toBlock = Number.parseInt(toBlock)
-      } else {
-        ctx.throw(400)
-      }
-    }
+    let {contract, topic1, topic2, topic3, topic4} = this.ctx.query
     if (contract != null) {
       contract = (await ctx.service.contract.getContractAddresses([contract]))[0]
     }
@@ -173,7 +171,7 @@ class ContractController extends Controller {
       }
     }
 
-    let {totalCount, logs} = await ctx.service.contract.searchLogs({fromBlock, toBlock, contract, topic1, topic2, topic3, topic4})
+    let {totalCount, logs} = await ctx.service.contract.searchLogs({contract, topic1, topic2, topic3, topic4})
     ctx.body = {
       totalCount,
       logs: logs.map(log => ({

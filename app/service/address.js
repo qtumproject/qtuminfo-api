@@ -54,13 +54,16 @@ class AddressService extends Service {
       .map(address => Buffer.concat([Buffer.alloc(12), address.data]))
     let [{count}] = await db.query(sql`
       SELECT COUNT(*) AS count FROM (
-        SELECT transaction_id FROM balance_change WHERE address_id IN ${addressIds}
+        SELECT transaction_id FROM balance_change
+        WHERE address_id IN ${addressIds} AND ${this.ctx.service.block.getRawBlockFilter()}
         UNION
         SELECT transaction_id FROM evm_receipt
         WHERE (sender_type, sender_data) IN ${rawAddresses.map(address => [Address.parseType(address.type), address.data])}
+          AND ${this.ctx.service.block.getRawBlockFilter()}
         UNION
         SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log, contract
         WHERE receipt._id = log.receipt_id
+          AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
           AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
           AND log.topic1 = ${TransferABI.id}
           AND (log.topic2 IN ${topics} OR log.topic3 IN ${topics})
@@ -89,15 +92,17 @@ class AddressService extends Service {
       SELECT tx.id AS id FROM (
         SELECT _id FROM (
           SELECT block_height, index_in_block, transaction_id AS _id FROM balance_change
-          WHERE address_id IN ${addressIds}
+          WHERE address_id IN ${addressIds} AND ${this.ctx.service.block.getRawBlockFilter()}
           UNION
           SELECT block_height, index_in_block, transaction_id AS _id
           FROM evm_receipt
           WHERE (sender_type, sender_data) IN ${rawAddresses.map(address => [Address.parseType(address.type), address.data])}
+            AND ${this.ctx.service.block.getRawBlockFilter()}
           UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
           FROM evm_receipt receipt, evm_receipt_log log, contract
           WHERE receipt._id = log.receipt_id
+            AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
             AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
             AND log.topic1 = ${TransferABI.id}
             AND (log.topic2 IN ${topics} OR log.topic3 IN ${topics})
@@ -118,7 +123,10 @@ class AddressService extends Service {
     const {BalanceChange} = this.ctx.model
     const {in: $in} = this.app.Sequelize.Op
     return await BalanceChange.count({
-      where: {addressId: {[$in]: addressIds}},
+      where: {
+        ...this.ctx.service.block.getBlockFilter(),
+        addressId: {[$in]: addressIds}
+      },
       distinct: true,
       col: 'transactionId',
       transaction: this.ctx.transaction
@@ -136,7 +144,7 @@ class AddressService extends Service {
       transactionIds = (await db.query(sql`
         SELECT transaction_id AS _id
         FROM balance_change
-        WHERE address_id = ${addressIds[0]}
+        WHERE address_id = ${addressIds[0]} AND ${this.ctx.service.block.getRawBlockFilter()}
         ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, transaction_id ${{raw: order}}
         LIMIT ${offset}, ${limit}
       `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({_id}) => _id)
@@ -145,7 +153,7 @@ class AddressService extends Service {
         SELECT _id FROM (
           SELECT MIN(block_height) AS block_height, MIN(index_in_block) AS index_in_block, transaction_id AS _id
           FROM balance_change
-          WHERE address_id IN ${addressIds}
+          WHERE address_id IN ${addressIds} AND ${this.ctx.service.block.getRawBlockFilter()}
           GROUP BY _id
         ) list
         ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, _id ${{raw: order}}
@@ -169,14 +177,14 @@ class AddressService extends Service {
     const db = this.ctx.model
     const {Address} = db
     const {sql} = this.ctx.helper
-    let contractFilter = ''
+    let contractFilter = 'TRUE'
     if (contract) {
-      contractFilter = sql`AND contract_address = ${contract.contractAddress}`
+      contractFilter = sql`contract_address = ${contract.contractAddress}`
     }
     let [{count}] = await db.query(sql`
       SELECT COUNT(DISTINCT(_id)) AS count FROM evm_receipt
       WHERE (sender_type, sender_data) IN ${rawAddresses.map(address => [Address.parseType(address.type), address.data])}
-        ${{raw: contractFilter}}
+        AND ${this.ctx.service.block.getRawBlockFilter()} AND ${{raw: contractFilter}}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return count
   }
@@ -187,15 +195,15 @@ class AddressService extends Service {
     const {sql} = this.ctx.helper
     let {limit, offset, reversed = true} = this.ctx.state.pagination
     let order = reversed ? 'DESC' : 'ASC'
-    let contractFilter = ''
+    let contractFilter = 'TRUE'
     if (contract) {
-      contractFilter = sql`AND contract_address = ${contract.contractAddress}`
+      contractFilter = sql`contract_address = ${contract.contractAddress}`
     }
     let totalCount = await this.getAddressContractTransactionCount(rawAddresses, contract)
     let receiptIds = (await db.query(sql`
       SELECT _id FROM evm_receipt
       WHERE (sender_type, sender_data) IN ${rawAddresses.map(address => [Address.parseType(address.type), address.data])}
-        ${{raw: contractFilter}}
+        AND ${this.ctx.service.block.getRawBlockFilter()} AND ${{raw: contractFilter}}
       ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, transaction_id ${{raw: order}}, output_index ${{raw: order}}
       LIMIT ${offset}, ${limit}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({_id}) => _id)
