@@ -372,7 +372,7 @@ class TransactionService extends Service {
           outputObject.evmReceipt.logs = eventLogs.filter(log => log.receiptId === output.evmReceipt._id).map(log => ({
             address: log.contract.addressString,
             addressHex: log.address,
-            topics: transformTopics(log),
+            topics: this.transformTopics(log),
             data: log.data,
             ...log.qrc20 ? {
               qrc20: {
@@ -874,19 +874,17 @@ class TransactionService extends Service {
       transaction: this.ctx.state.transaction
     })
 
-    let scriptPubKey = OutputScript.fromBuffer(receipt.output.scriptPubKey)
-    let output = {
-      scriptPubKey,
-      value: receipt.output.value
-    }
+    let outputAddress
+    let outputAddressHex
+    let isInvalidContract
     if (receipt.output.address.contract) {
-      output.address = receipt.output.address.contract.addressString
-      output.addressHex = receipt.output.address.contract.address
+      outputAddress = receipt.output.address.contract.addressString
+      outputAddressHex = receipt.output.address.contract.address
     } else {
       let address = RawAddress.fromString(receipt.output.address.string, this.app.chain)
-      output.address = receipt.output.address.string
-      output.addressHex = address.data
-      output.isInvalidContract = true
+      outputAddress = receipt.output.address.string
+      outputAddressHex = address.data
+      isInvalidContract = true
     }
 
     return {
@@ -897,7 +895,11 @@ class TransactionService extends Service {
         blockHash: receipt.header.hash,
         timestamp: receipt.header.timestamp
       },
-      output,
+      scriptPubKey: OutputScript.fromBuffer(receipt.output.scriptPubKey),
+      value: receipt.output.value,
+      outputAddress,
+      outputAddressHex,
+      isInvalidContract,
       sender: new RawAddress({
         type: receipt.senderType,
         data: receipt.senderData,
@@ -911,10 +913,27 @@ class TransactionService extends Service {
       evmLogs: logs.map(log => ({
         address: log.contract.addressString,
         addressHex: log.address,
-        topics: transformTopics(log),
+        topics: this.transformTopics(log),
         data: log.data
       }))
     }
+  }
+
+  transformTopics(log) {
+    let result = []
+    if (log.topic1) {
+      result.push(log.topic1)
+    }
+    if (log.topic2) {
+      result.push(log.topic2)
+    }
+    if (log.topic3) {
+      result.push(log.topic3)
+    }
+    if (log.topic4) {
+      result.push(log.topic4)
+    }
+    return result
   }
 }
 
@@ -925,23 +944,6 @@ function isCoinbase(input) {
 function isCoinstake(transaction) {
   return transaction.inputs.length > 0 && Buffer.compare(transaction.inputs[0].prevTxId, Buffer.alloc(32)) !== 0
     && transaction.outputs.length >= 2 && transaction.outputs[0].value === 0n && transaction.outputs[0].scriptPubKey.length === 0
-}
-
-function transformTopics(log) {
-  let result = []
-  if (log.topic1) {
-    result.push(log.topic1)
-  }
-  if (log.topic2) {
-    result.push(log.topic2)
-  }
-  if (log.topic3) {
-    result.push(log.topic3)
-  }
-  if (log.topic4) {
-    result.push(log.topic4)
-  }
-  return result
 }
 
 module.exports = TransactionService

@@ -62,6 +62,39 @@ class ContractController extends Controller {
     }
   }
 
+  async basicTransactions() {
+    let {ctx} = this
+    let {totalCount, transactions} = await ctx.service.contract.getContractBasicTransactions(ctx.state.contract.contractAddress)
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(transaction => ({
+        transactionId: transaction.transactionId.toString('hex'),
+        outputIndex: transaction.outputIndex,
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash && transaction.blockHash.toString('hex'),
+        timestamp: transaction.timestamp,
+        confirmations: transaction.confirmations,
+        type: transaction.scriptPubKey.type,
+        gasLimit: transaction.scriptPubKey.gasLimit,
+        gasPrice: transaction.scriptPubKey.gasPrice,
+        byteCode: transaction.scriptPubKey.byteCode.toString('hex'),
+        outputValue: transaction.value.toString(),
+        sender: transaction.sender.toString(),
+        gasUsed: transaction.gasUsed,
+        contractAddress: transaction.contractAddress,
+        contractAddressHex: transaction.contractAddressHex.toString('hex'),
+        excepted: transaction.excepted,
+        exceptedMessage: transaction.exceptedMessage,
+        evmLogs: transaction.evmLogs.map(log => ({
+          address: log.address,
+          addressHex: log.addressHex.toString('hex'),
+          topics: log.topics.map(topic => topic.toString('hex')),
+          data: log.data.toString('hex')
+        }))
+      }))
+    }
+  }
+
   async balanceHistory() {
     let {ctx} = this
     let {totalCount, transactions} = await ctx.service.balance.getBalanceHistory(ctx.state.contract.addressIds, {nonZero: true})

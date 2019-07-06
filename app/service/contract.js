@@ -185,6 +185,111 @@ class ContractService extends Service {
     return {totalCount, transactions}
   }
 
+  async getContractBasicTransactionCount(contractAddress) {
+    const {EvmReceipt: EVMReceipt} = this.ctx.model
+    return await EVMReceipt.count({
+      where: {
+        contractAddress,
+        ...this.ctx.service.block.getBlockFilter()
+      },
+      transaction: this.ctx.state.transaction
+    })
+  }
+
+  async getContractBasicTransactions(contractAddress) {
+    const {Address, OutputScript} = this.app.qtuminfo.lib
+    const {
+      Header, Transaction, TransactionOutput, Contract, EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog,
+      where, col
+    } = this.ctx.model
+    const {in: $in} = this.app.Sequelize.Op
+    let {limit, offset, reversed = true} = this.ctx.state.pagination
+    let order = reversed ? 'DESC' : 'ASC'
+    let totalCount = await this.getContractBasicTransactionCount(contractAddress)
+    let receiptIds = (await EVMReceipt.findAll({
+      where: {
+        contractAddress,
+        ...this.ctx.service.block.getBlockFilter()
+      },
+      attributes: ['_id'],
+      order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order], ['outputIndex', order]],
+      limit,
+      offset,
+      transaction: this.ctx.state.transaction
+    })).map(receipt => receipt._id)
+    let receipts = await EVMReceipt.findAll({
+      where: {_id: {[$in]: receiptIds}},
+      include: [
+        {
+          model: Header,
+          as: 'header',
+          required: false,
+          attributes: ['hash', 'timestamp']
+        },
+        {
+          model: Transaction,
+          as: 'transaction',
+          required: true,
+          attributes: ['id']
+        },
+        {
+          model: TransactionOutput,
+          as: 'output',
+          on: {
+            transactionId: where(col('output.transaction_id'), '=', col('evm_receipt.transaction_id')),
+            outputIndex: where(col('output.output_index'), '=', col('evm_receipt.output_index'))
+          },
+          required: true,
+          attributes: ['scriptPubKey', 'value']
+        },
+        {
+          model: EVMReceiptLog,
+          as: 'logs',
+          required: false,
+          include: [{
+            model: Contract,
+            as: 'contract',
+            required: true,
+            attributes: ['addressString']
+          }]
+        },
+        {
+          model: Contract,
+          as: 'contract',
+          required: true,
+          attributes: ['addressString']
+        }
+      ],
+      order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order], ['outputIndex', order]],
+      transaction: this.ctx.state.transaction
+    })
+    let transactions = receipts.map(receipt => ({
+      transactionId: receipt.transaction.id,
+      outputIndex: receipt.outputIndex,
+      ...receipt.header ? {
+        blockHeight: receipt.blockHeight,
+        blockHash: receipt.header.hash,
+        timestamp: receipt.header.timestamp,
+        confirmations: this.app.blockchainInfo.tip.height - receipt.blockHeight + 1
+      } : {confirmations: 0},
+      scriptPubKey: OutputScript.fromBuffer(receipt.output.scriptPubKey),
+      value: receipt.output.value,
+      sender: new Address({type: receipt.senderType, data: receipt.senderData, chain: this.app.chain}),
+      gasUsed: receipt.gasUsed,
+      contractAddress: receipt.contract.addressString,
+      contractAddressHex: receipt.contractAddress,
+      excepted: receipt.excepted,
+      exceptedMessage: receipt.exceptedMessage,
+      evmLogs: receipt.logs.sort((x, y) => x.logIndex - y.logIndex).map(log => ({
+        address: log.contract.addressString,
+        addressHex: log.address,
+        topics: this.ctx.service.transaction.transformTopics(log),
+        data: log.data
+      }))
+    }))
+    return {totalCount, transactions}
+  }
+
   async callContract(contract, data, sender) {
     let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
     return await client.callcontract(

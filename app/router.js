@@ -108,6 +108,11 @@ module.exports = app => {
     controller.contract.transactions
   )
   router.get(
+    '/contract/:contract/basic-txs',
+    contractMiddleware, paginationMiddleware, blockFilterMiddleware,
+    controller.contract.basicTransactions
+  )
+  router.get(
     '/contract/:contract/balance-history',
     contractMiddleware, paginationMiddleware,
     controller.contract.balanceHistory
