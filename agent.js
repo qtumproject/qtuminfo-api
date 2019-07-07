@@ -33,7 +33,7 @@ module.exports = function(agent) {
   })
 
   async function fetchFeeRate() {
-    agent.messenger.sendToApp('update-feerate')
+    agent.messenger.sendRandom('update-feerate')
   }
 
   let lastTipHash = Buffer.alloc(0)
