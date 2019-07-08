@@ -3,26 +3,26 @@ const {Service} = require('egg')
 class QRC20Service extends Service {
   async listQRC20Tokens() {
     const db = this.ctx.model
+    const {Qrc20Statistics: QRC20Statistics} = db
     const {sql} = this.ctx.helper
+    const {gt: $gt} = this.app.Sequelize.Op
     let {limit, offset} = this.ctx.state.pagination
 
-    let [{totalCount}] = await db.query(sql`
-      SELECT COUNT(DISTINCT(qrc20_balance.contract_address)) AS count FROM qrc20_balance
-      INNER JOIN qrc20 USING (contract_address)
-      WHERE balance != ${Buffer.alloc(32)}
-    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    let totalCount = await QRC20Statistics.count({
+      where: {transactions: {[$gt]: 0}},
+      transaction: this.ctx.state.transaction
+    })
     let list = await db.query(sql`
       SELECT
         contract.address_string AS address, contract.address AS addressHex,
         qrc20.name AS name, qrc20.symbol AS symbol, qrc20.decimals AS decimals, qrc20.total_supply AS totalSupply,
         qrc20.version AS version,
-        list.holders AS holders
+        list.holders AS holders,
+        list.transactions AS transactions
       FROM (
-        SELECT contract_address, COUNT(*) AS holders FROM qrc20_balance
-        INNER JOIN qrc20 USING (contract_address)
-        WHERE balance != ${Buffer.alloc(32)}
-        GROUP BY contract_address
-        ORDER BY holders DESC
+        SELECT contract_address, holders, transactions FROM qrc20_statistics
+        WHERE transactions > 0
+        ORDER BY transactions DESC
         LIMIT ${offset}, ${limit}
       ) list
       INNER JOIN qrc20 USING (contract_address)
@@ -39,7 +39,8 @@ class QRC20Service extends Service {
         decimals: item.decimals,
         totalSupply: BigInt(`0x${item.totalSupply.toString('hex')}`),
         version: item.version && item.version.toString(),
-        holders: item.holders
+        holders: item.holders,
+        transactions: item.transactions
       }))
     }
   }

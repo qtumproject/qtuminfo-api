@@ -14,7 +14,8 @@ class QRC20Controller extends Controller {
         decimals: item.decimals,
         totalSupply: item.totalSupply.toString(),
         version: item.version,
-        holders: item.holders
+        holders: item.holders,
+        transactions: item.transactions
       }))
     }
   }
