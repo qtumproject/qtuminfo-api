@@ -15,6 +15,7 @@
     "for-direction": "error",
     "getter-return": "warn",
     "no-console": "off",
+    "no-constant-condition": ["warn", {"checkLoops": false}],
     "no-empty": ["warn", {"allowEmptyCatch": true}],
     "no-extra-parens": "warn",
     "curly": ["error", "multi-line"],

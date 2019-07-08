@@ -279,7 +279,7 @@ class BalanceService extends Service {
     let transaction = await db.transaction()
     try {
       const blockHeight = this.app.blockchainInfo.tip.height
-      let [list] = await db.query(sql`
+      let list = await db.query(sql`
         SELECT list.address_id AS addressId, list.balance AS balance
         FROM (
           SELECT address_id, SUM(value) AS balance
@@ -293,7 +293,7 @@ class BalanceService extends Service {
         ) list
         INNER JOIN address ON address._id = list.address_id
         WHERE address.type < ${Address.parseType('contract')}
-      `, {transaction})
+      `, {type: db.QueryTypes.SELECT, transaction})
       await db.query(sql`DELETE FROM rich_list`, {transaction})
       await RichList.bulkCreate(
         list.map(({addressId, balance}) => ({addressId, balance: BigInt(balance)})),

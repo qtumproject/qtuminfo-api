@@ -16,6 +16,11 @@ module.exports = app => {
     await ctx.service.balance.updateRichList()
   })
 
+  app.messenger.on('update-qrc20-statistics', async () => {
+    let ctx = app.createAnonymousContext()
+    await ctx.service.qrc20.updateQRC20Statistics()
+  })
+
   app.messenger.on('update-daily-transactions', async () => {
     let ctx = app.createAnonymousContext()
     let dailyTransactions = await ctx.service.statistics.getDailyTransactions()

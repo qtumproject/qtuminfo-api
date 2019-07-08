@@ -323,6 +323,68 @@ class QRC20Service extends Service {
       })
     }
   }
+
+  async updateQRC20Statistics() {
+    const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+    const db = this.ctx.model
+    const {Qrc20: QRC20, Qrc20Statistics: QRC20Statistics} = db
+    const {sql} = this.ctx.helper
+    let transaction = await db.transaction()
+    try {
+      let result = (await QRC20.findAll({attributes: ['contractAddress'], transaction})).map(
+        ({contractAddress}) => ({contractAddress, holders: 0, transactions: 0})
+      )
+      let balanceResults = await db.query(sql`
+        SELECT contract_address AS contractAddress, COUNT(*) AS count FROM qrc20_balance
+        WHERE balance != ${Buffer.alloc(32)}
+        GROUP BY contractAddress ORDER BY contractAddress
+      `, {type: db.QueryTypes.SELECT, transaction})
+      let i = 0
+      for (let {contractAddress, count} of balanceResults) {
+        while (true) {
+          if (i >= result.length) {
+            break
+          }
+          let comparison = Buffer.compare(contractAddress, result[i].contractAddress)
+          if (comparison === 0) {
+            result[i].holders = count
+            break
+          } else if (comparison < 0) {
+            break
+          } else {
+            ++i
+          }
+        }
+      }
+      let transactionResults = await db.query(sql`
+        SELECT address AS contractAddress, COUNT(*) AS count FROM evm_receipt_log USE INDEX (contract)
+        WHERE topic1 = ${TransferABI.id}
+        GROUP BY contractAddress ORDER BY contractAddress
+      `, {type: db.QueryTypes.SELECT, transaction})
+      let j = 0
+      for (let {contractAddress, count} of transactionResults) {
+        while (true) {
+          if (j >= result.length) {
+            break
+          }
+          let comparison = Buffer.compare(contractAddress, result[j].contractAddress)
+          if (comparison === 0) {
+            result[j].transactions = count
+            break
+          } else if (comparison < 0) {
+            break
+          } else {
+            ++j
+          }
+        }
+      }
+      await db.query(sql`DELETE FROM qrc20_statistics`, {transaction})
+      await QRC20Statistics.bulkCreate(result, {validate: false, transaction, logging: false})
+      await transaction.commit()
+    } catch (err) {
+      await transaction.rollback()
+    }
+  }
 }
 
 module.exports = QRC20Service
