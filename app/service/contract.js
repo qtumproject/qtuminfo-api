@@ -307,7 +307,7 @@ class ContractService extends Service {
     const {sql} = this.ctx.helper
     let {limit, offset} = this.ctx.state.pagination
 
-    let blockFilter = this.ctx.service.getRawBlockFilter('receipt.block_height')
+    let blockFilter = this.ctx.service.block.getRawBlockFilter('receipt.block_height')
     let contractFilter = contract ? sql`log.address = ${contract}` : 'TRUE'
     let topic1Filter = topic1 ? sql`log.topic1 = ${topic1}` : 'TRUE'
     let topic2Filter = topic2 ? sql`log.topic2 = ${topic2}` : 'TRUE'

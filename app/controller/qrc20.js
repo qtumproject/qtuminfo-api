@@ -20,9 +20,31 @@ class QRC20Controller extends Controller {
     }
   }
 
+  async transactions() {
+    const {ctx} = this
+    ctx.assert(ctx.state.token.type === 'qrc20', 404)
+    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20TokenTransactions(ctx.state.token.contractAddress)
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(transaction => ({
+        transactionId: transaction.transactionId.toString('hex'),
+        outputIndex: transaction.outputIndex,
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash.toString('hex'),
+        timestamp: transaction.timestamp,
+        from: transaction.from,
+        fromHex: transaction.fromHex && transaction.fromHex.toString('hex'),
+        to: transaction.to,
+        toHex: transaction.toHex && transaction.toHex.toString('hex'),
+        value: transaction.value.toString()
+      }))
+    }
+  }
+
   async richList() {
     const {ctx} = this
-    let {totalCount, list} = await ctx.service.qrc20.getQRC20TokenRichList(ctx.state.contract.contractAddress)
+    ctx.assert(ctx.state.token.type === 'qrc20', 404)
+    let {totalCount, list} = await ctx.service.qrc20.getQRC20TokenRichList(ctx.state.token.contractAddress)
     ctx.body = {
       totalCount,
       list: list.map(item => ({

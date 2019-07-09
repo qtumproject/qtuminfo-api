@@ -143,8 +143,13 @@ module.exports = app => {
     controller.qrc20.list
   )
   router.get(
-    '/qrc20/:contract/rich-list',
-    contractMiddleware, paginationMiddleware,
+    '/qrc20/:token/txs',
+    middleware.contract('token'), paginationMiddleware, blockFilterMiddleware,
+    controller.qrc20.transactions
+  )
+  router.get(
+    '/qrc20/:token/rich-list',
+    middleware.contract('token'), paginationMiddleware,
     controller.qrc20.richList
   )
   router.get(

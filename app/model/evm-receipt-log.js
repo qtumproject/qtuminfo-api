@@ -10,6 +10,7 @@ module.exports = app => {
     },
     receiptId: BIGINT.UNSIGNED,
     logIndex: INTEGER.UNSIGNED,
+    blockHeight: INTEGER.UNSIGNED,
     address: CHAR(20).BINARY,
     topic1: {
       type: STRING(32).BINARY,
