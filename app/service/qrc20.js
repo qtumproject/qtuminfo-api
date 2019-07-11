@@ -104,12 +104,11 @@ class QRC20Service extends Service {
       sql`(log.topic2 IN ${topicAddresses} OR log.topic3 IN ${topicAddresses})`
     ].join(' AND ')
 
-    let result = await db.query(sql`
+    let [{totalCount}] = await db.query(sql`
       SELECT COUNT(DISTINCT(receipt.transaction_id)) AS totalCount
       FROM evm_receipt receipt, evm_receipt_log log, qrc20
       WHERE receipt._id = log.receipt_id AND log.address = qrc20.contract_address AND ${{raw: logFilter}}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-    let totalCount = result[0].totalCount || 0
     if (totalCount === 0) {
       return {totalCount: 0, transactions: []}
     }

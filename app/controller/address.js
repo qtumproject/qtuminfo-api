@@ -172,9 +172,9 @@ class AddressController extends Controller {
     const {Address} = this.app.qtuminfo.lib
     let {ctx} = this
     let tokenAddress = null
-    if (ctx.state.contract) {
-      if (ctx.state.contract.type === 'qrc20') {
-        tokenAddress = ctx.state.contract.contractAddress
+    if (ctx.state.token) {
+      if (ctx.state.token.type === 'qrc20') {
+        tokenAddress = ctx.state.token.contractAddress
       } else {
         ctx.body = {
           totalCount: 0,
