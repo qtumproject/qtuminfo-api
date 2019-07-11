@@ -73,10 +73,9 @@ class MiscService extends Service {
     if (qrc20Results.length) {
       let [{address, addressHex}] = await db.query(sql`
         SELECT contract.address_string AS address, contract.address AS addressHex FROM (
-          SELECT contract_address, COUNT(*) AS holders FROM qrc20_balance
-          WHERE contract_address IN ${qrc20Results} AND balance != ${Buffer.alloc(32)}
-          GROUP BY contract_address
-          ORDER BY holders DESC LIMIT 1
+          SELECT contract_address FROM qrc20_statistics
+          WHERE contract_address IN ${qrc20Results}
+          ORDER BY transactions DESC LIMIT 1
         ) qrc20_balance
         INNER JOIN contract ON contract.address = qrc20_balance.contract_address
       `, {type: db.QueryTypes.SELECT, transaction})
