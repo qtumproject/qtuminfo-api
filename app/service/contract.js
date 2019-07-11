@@ -34,7 +34,7 @@ class ContractService extends Service {
   }
 
   async getContractSummary(contractAddress, addressIds) {
-    const {Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance, Qrc721: QRC721} = this.ctx.model
+    const {Contract, Qrc20: QRC20, Qrc20Statistics: QRC20Statistics, Qrc721: QRC721} = this.ctx.model
     const {balance: balanceService, qrc20: qrc20Service, qrc721: qrc721Service} = this.ctx.service
     const {ne: $ne} = this.app.Sequelize.Op
     let contract = await Contract.findOne({
@@ -45,7 +45,12 @@ class ContractService extends Service {
           model: QRC20,
           as: 'qrc20',
           required: false,
-          attributes: ['name', 'symbol', 'decimals', 'totalSupply', 'version']
+          attributes: ['name', 'symbol', 'decimals', 'totalSupply', 'version'],
+          include: [{
+            model: QRC20Statistics,
+            as: 'statistics',
+            required: true
+          }]
         },
         {
           model: QRC721,
@@ -56,16 +61,6 @@ class ContractService extends Service {
       ],
       transaction: this.ctx.state.transaction
     })
-    if (contract.type === 'qrc20') {
-      contract.qrc20.holders = await QRC20Balance.count({
-        where: {
-          contractAddress,
-          address: {[$ne]: Buffer.alloc(20)},
-          balance: {[$ne]: Buffer.alloc(32)}
-        },
-        transaction: this.ctx.state.transaction
-      })
-    }
     let [
       {totalReceived, totalSent},
       unconfirmed,
@@ -91,7 +86,8 @@ class ContractService extends Service {
           decimals: contract.qrc20.decimals,
           totalSupply: contract.qrc20.totalSupply,
           version: contract.qrc20.version,
-          holders: contract.qrc20.holders
+          holders: contract.qrc20.statistics.holders,
+          transactions: contract.qrc20.statistics.transactions
         }
       } : {},
       ...contract.type === 'qrc721' ? {

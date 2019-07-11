@@ -18,7 +18,8 @@ class ContractController extends Controller {
           decimals: summary.qrc20.decimals,
           totalSupply: summary.qrc20.totalSupply.toString(),
           version: summary.qrc20.version,
-          holders: summary.qrc20.holders
+          holders: summary.qrc20.holders,
+          transactions: summary.qrc20.transactions
         }
       } : {},
       ...summary.type === 'qrc721' ? {

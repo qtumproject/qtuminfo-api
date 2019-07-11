@@ -12,8 +12,8 @@ module.exports = app => {
 
   QRC20Statistics.associate = () => {
     const {Qrc20: QRC20} = app.model
-    QRC20Statistics.belongsTo(QRC20, {as: 'qrc20', foreignKey: 'address', sourceKey: 'contractAddress'})
-    QRC20.hasOne(QRC20Statistics, {as: 'statistics', foreignKey: 'address', sourceKey: 'contractAddress'})
+    QRC20Statistics.belongsTo(QRC20, {as: 'qrc20', foreignKey: 'contractAddress'})
+    QRC20.hasOne(QRC20Statistics, {as: 'statistics', foreignKey: 'contractAddress'})
   }
 
   return QRC20Statistics
