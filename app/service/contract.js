@@ -36,7 +36,6 @@ class ContractService extends Service {
   async getContractSummary(contractAddress, addressIds) {
     const {Contract, Qrc20: QRC20, Qrc20Statistics: QRC20Statistics, Qrc721: QRC721} = this.ctx.model
     const {balance: balanceService, qrc20: qrc20Service, qrc721: qrc721Service} = this.ctx.service
-    const {ne: $ne} = this.app.Sequelize.Op
     let contract = await Contract.findOne({
       where: {address: contractAddress},
       attributes: ['addressString', 'vm', 'type'],
@@ -312,7 +311,7 @@ class ContractService extends Service {
 
     let [{count: totalCount}] = await db.query(sql`
       SELECT COUNT(DISTINCT(log._id)) AS count from evm_receipt receipt, evm_receipt_log log
-      WHERE receipt._id = log.receipt_id AND ${{raw: blockFilter}} AND ${{raw: contractFilter}}
+      WHERE receipt._id = log.receipt_id AND ${blockFilter} AND ${{raw: contractFilter}}
         AND ${{raw: topic1Filter}} AND ${{raw: topic2Filter}} AND ${{raw: topic3Filter}} AND ${{raw: topic4Filter}}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.transaction})
     if (totalCount === 0) {
@@ -321,7 +320,7 @@ class ContractService extends Service {
 
     let ids = (await db.query(sql`
       SELECT log._id AS _id from evm_receipt receipt, evm_receipt_log log
-      WHERE receipt._id = log.receipt_id AND ${{raw: blockFilter}} AND ${{raw: contractFilter}}
+      WHERE receipt._id = log.receipt_id AND ${blockFilter} AND ${{raw: contractFilter}}
         AND ${{raw: topic1Filter}} AND ${{raw: topic2Filter}} AND ${{raw: topic3Filter}} AND ${{raw: topic4Filter}}
       ORDER BY log._id ASC
       LIMIT ${offset}, ${limit}
@@ -371,20 +370,17 @@ class ContractService extends Service {
     return {
       totalCount,
       logs: logs.map(log => ({
-        blockHash: log.receipt.transaction.header.hash,
-        blockHeight: log.receipt.transaction.header.height,
-        timestamp: log.receipt.transaction.header.timestamp,
         transactionId: log.receipt.transaction.id,
         outputIndex: log.receipt.outputIndex,
+        blockHeight: log.receipt.transaction.header.height,
+        blockHash: log.receipt.transaction.header.hash,
+        timestamp: log.receipt.transaction.header.timestamp,
         sender: new Address({type: log.receipt.senderType, data: log.receipt.senderData, chain: this.app.chain}),
         contractAddress: log.receipt.contract.addressString,
         contractAddressHex: log.receipt.contract.address,
         address: log.contract.addressString,
         addressHex: log.contract.address,
-        topic1: log.topic1,
-        topic2: log.topic2,
-        topic3: log.topic3,
-        topic4: log.topic4,
+        topics: this.ctx.service.transaction.transformTopics(log),
         data: log.data
       }))
     }

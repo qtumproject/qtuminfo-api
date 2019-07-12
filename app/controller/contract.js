@@ -209,20 +209,17 @@ class ContractController extends Controller {
     ctx.body = {
       totalCount,
       logs: logs.map(log => ({
+        transactionId: log.transactionId.toString('hex'),
+        outputIndex: log.outputIndex,
         blockHash: log.blockHash.toString('hex'),
         blockHeight: log.blockHeight,
         timestamp: log.timestamp,
-        transactionId: log.transactionId.toString('hex'),
-        outputIndex: log.outputIndex,
         sender: log.sender.toString(),
         contractAddress: log.contractAddress,
         contractAddressHex: log.contractAddressHex.toString('hex'),
         address: log.address,
         addressHex: log.addressHex.toString('hex'),
-        topic1: log.topic1 && log.topic1.toString('hex'),
-        topic2: log.topic2 && log.topic2.toString('hex'),
-        topic3: log.topic3 && log.topic3.toString('hex'),
-        topic4: log.topic4 && log.topic4.toString('hex'),
+        topics: log.topics.map(topic => topic.toString('hex')),
         data: log.data.toString('hex')
       }))
     }
