@@ -61,9 +61,26 @@ GET /block/14f9d58d8f96d3a685808a8be3e5f2743dd71cb1af54fb8a134b9a1bc8bc20b8
 GET /blocks
 ```
 **Request Params**
-| Name | Type | Default |
-| - | - | - | - |
-| `date` | ISO 8601 Date String (optional) | Today |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Default</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+              <code>date</code>
+            </td>
+            <td>
+              <code>ISO 8601 Date String (optional)</code>
+            </td>
+            <td>Today</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```
@@ -145,9 +162,28 @@ GET /blocks?date=2019-01-01
 GET /recent-blocks
 ```
 **Request Params**
-| Name | Type | Default | Description |
-| - | - | - | - |
-| `count` | Number (optional) | 10 | Number of Recent Blocks |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+              <code>count</code>
+            </td>
+            <td>
+              <code>Number (optional)</code>
+            </td>
+            <td>10</td>
+            <td>Number of Recent Blocks</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```

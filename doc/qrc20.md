@@ -14,9 +14,24 @@ GET /qrc20
 ```
 
 **Request Parameter**
-| Name | Default | Description |
-| - | - | - |
-| [Pagination Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters) | | |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```
@@ -151,11 +166,40 @@ GET /qrc20/:token/txs
 ```
 
 **Request Parameter**
-| Name | Default | Description |
-| - | - | - |
-| [Pagination Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters) | | |
-| [Block / Timestamp Filter Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters) | | |
-| `reversed` | `true` | Return records reversed |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters">
+                Block / Timestamp Filter Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+              <code>reversed</code>
+            </td>
+            <td>
+              <code>true</code>
+            </td>
+            <td>Return records reversed</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```

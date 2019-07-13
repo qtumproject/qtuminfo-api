@@ -181,11 +181,40 @@ GET /address/:address/txs
 ```
 
 **Request Parameters**
-| Name | Default | Description |
-| - | - | - |
-| [Pagination Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters) | | |
-| [Block / Timestamp Filter Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters) | | |
-| `reversed` | `true` | Return records reversed |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters">
+                Block / Timestamp Filter Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+              <code>reversed</code>
+            </td>
+            <td>
+              <code>true</code>
+            </td>
+            <td>Return records reversed</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```
@@ -221,11 +250,40 @@ GET /address/:address/basic-txs
 ```
 
 **Request Parameters**
-| Name | Default | Description |
-| - | - | - |
-| [Pagination Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters) | | |
-| [Block / Timestamp Filter Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters) | | |
-| `reversed` | `true` | Return records reversed |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters">
+                Block / Timestamp Filter Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+              <code>reversed</code>
+            </td>
+            <td>
+              <code>true</code>
+            </td>
+            <td>Return records reversed</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```
@@ -307,11 +365,40 @@ GET /address/:address/contract-txs/:contract
 ```
 
 **Request Parameters**
-| Name | Default | Description |
-| - | - | - |
-| [Pagination Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters) | | |
-| [Block / Timestamp Filter Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters) | | |
-| `reversed` | `true` | Return records reversed |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters">
+                Block / Timestamp Filter Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+              <code>reversed</code>
+            </td>
+            <td>
+              <code>true</code>
+            </td>
+            <td>Return records reversed</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request #1**
 ```
@@ -767,10 +854,33 @@ GET /address/:address/balance-history
 ```
 
 **Request Parameters**
-| Name | Default | Description |
-| - | - | - |
-| [Pagination Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters) | | |
-| `reversed` | `true` | Return records reversed |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+              <code>reversed</code>
+            </td>
+            <td>
+              <code>true</code>
+            </td>
+            <td>Return records reversed</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```
@@ -836,10 +946,33 @@ GET /address/:address/qrc20-balance-history/:token
 ```
 
 **Request Parameters**
-| Name | Default | Description |
-| - | - | - |
-| [Pagination Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters) | | |
-| `reversed` | `true` | Return records reversed |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+              <code>reversed</code>
+            </td>
+            <td>
+              <code>true</code>
+            </td>
+            <td>Return records reversed</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request #1**
 ```

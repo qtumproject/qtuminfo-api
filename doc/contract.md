@@ -55,11 +55,40 @@ GET /contract/:contract/txs
 ```
 
 **Request Parameters**
-| Name | Default | Description |
-| - | - | - |
-| [Pagination Parameters](#Pagination-Parameters) | | |
-| [Block / Timestamp Filter Parameters](#Block--Timestamp-Filter-Parameters) | | |
-| `reversed` | `true` | Return records reversed |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters">
+                Block / Timestamp Filter Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+              <code>reversed</code>
+            </td>
+            <td>
+              <code>true</code>
+            </td>
+            <td>Return records reversed</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```
@@ -95,11 +124,40 @@ GET /contract/:contract/basic-txs
 ```
 
 **Request Parameters**
-| Name | Default | Description |
-| - | - | - |
-| [Pagination Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters) | | |
-| [Block / Timestamp Filter Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters) | | |
-| `reversed` | `true` | Return records reversed |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters">
+                Block / Timestamp Filter Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+              <code>reversed</code>
+            </td>
+            <td>
+              <code>true</code>
+            </td>
+            <td>Return records reversed</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```
@@ -218,10 +276,35 @@ GET /contract/:contract/call
 ```
 
 **Request Parameters**
-| Name | Type | Description |
-| - | - | - |
-| `data` | String | Hexadecimal data to send to contract |
-| `sender` | String (optional) | Base58 P2PKH or 20-byte hexadecimal sender address |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+              <code>date</code>
+            </td>
+            <td>
+              String
+            </td>
+            <td>Hexadecimal data to send to contract</td>
+        </tr>
+        <tr>
+            <td>
+              <code>sender</code>
+            </td>
+            <td>
+              String (optional)
+            </td>
+            <td>Base58 P2PKH or 20-byte hexadecimal sender address</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```
@@ -260,15 +343,76 @@ GET /searchlogs
 ```
 
 **Request Parameters**
-| Name | Type | Description |
-| - | - | - |
-| [Pagination Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters) | | |
-| [Block / Timestamp Filter Parameters](https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters) | | |
-| `contract` | Hexadecimal String (optional) | Filter contract address in log |
-| `topic1` | Hexadecimal String (optional) | Filter first topic in log |
-| `topic2` | Hexadecimal String (optional) | Filter second topic in log |
-| `topic3` | Hexadecimal String (optional) | Filter third topic in log |
-| `topic4` | Hexadecimal String (optional) | Filter fourth topic in log |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters">
+                Block / Timestamp Filter Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+              <code>contract</code>
+            </td>
+            <td>
+              String (optional)
+            </td>
+            <td>Filter contract address in log</td>
+        </tr>
+        <tr>
+            <td>
+              <code>topic1</code>
+            </td>
+            <td>
+              Hexadecimal String (optional)
+            </td>
+            <td>Filter first topic in log</td>
+        </tr>
+        <tr>
+            <td>
+              <code>topic2</code>
+            </td>
+            <td>
+              Hexadecimal String (optional)
+            </td>
+            <td>Filter second topic in log</td>
+        </tr>
+        <tr>
+            <td>
+              <code>topic3</code>
+            </td>
+            <td>
+              Hexadecimal String (optional)
+            </td>
+            <td>Filter third topic in log</td>
+        </tr>
+        <tr>
+            <td>
+              <code>topic4</code>
+            </td>
+            <td>
+              Hexadecimal String (optional)
+            </td>
+            <td>Filter fourth topic in log</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```

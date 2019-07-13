@@ -345,6 +345,26 @@ POST /tx/send
 | Name | Type | Description |
 | - | - | - |
 | `rawtx` | String | Raw Transaction Hex String |
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+              <code>rawtx</code>
+            </td>
+            <td>
+              String
+            </td>
+            <td>Raw Transaction Hex String</td>
+        </tr>
+    </tbody>
+</table>
 
 **Request**
 ```
