@@ -25,7 +25,7 @@ class AddressService extends Service {
       qrc20Service.getAllQRC20Balances(hexAddresses),
       qrc721Service.getAllQRC721Balances(hexAddresses),
       balanceService.getBalanceRanking(addressIds),
-      Block.count({where: {minerId: {[$in]: p2pkhAddressIds}, height: {[$gt]: 0}}}),
+      Block.count({where: {minerId: {[$in]: p2pkhAddressIds}, height: {[$gt]: 0}}, transaction: this.ctx.state.transaction}),
       this.getAddressTransactionCount(addressIds, rawAddresses),
     ])
     return {
@@ -216,6 +216,96 @@ class AddressService extends Service {
       })
     }))
     return {totalCount, transactions}
+  }
+
+  async getAddressQRC20TokenTransactionCount(rawAddresses, token) {
+    const {Address, Solidity} = this.app.qtuminfo.lib
+    const TransferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+    const {EvmReceiptLog: EVMReceiptLog} = this.ctx.model
+    const {or: $or, in: $in} = this.app.Sequelize.Op
+    let topicAddresses = rawAddresses
+      .filter(address => address.type === Address.PAY_TO_PUBLIC_KEY_HASH)
+      .map(address => Buffer.concat([Buffer.alloc(12), address.data]))
+    return await EVMReceiptLog.count({
+      where: {
+        address: token.contractAddress,
+        topic1: TransferABI.id,
+        [$or]: [
+          {topic2: {[$in]: topicAddresses}},
+          {topic3: {[$in]: topicAddresses}}
+        ]
+      },
+      transaction: this.ctx.state.transaction
+    })
+  }
+
+  async getAddressQRC20TokenTransactions(rawAddresses, token) {
+    const {Address, Solidity} = this.app.qtuminfo.lib
+    const TransferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+    const db = this.ctx.model
+    const {sql} = this.ctx.helper
+    let {limit, offset, reversed = true} = this.ctx.state.pagination
+    let order = reversed ? 'DESC' : 'ASC'
+    let topicAddresses = rawAddresses
+      .filter(address => address.type === Address.PAY_TO_PUBLIC_KEY_HASH)
+      .map(address => Buffer.concat([Buffer.alloc(12), address.data]))
+    let totalCount = await this.getAddressQRC20TokenTransactionCount(rawAddresses, token)
+    let transactions = await db.query(sql`
+      SELECT
+        transaction.id AS transactionId,
+        receipt.output_index AS outputIndex,
+        header.height AS blockHeight,
+        header.hash AS blockHash,
+        header.timestamp AS timestamp,
+        log.topic2 AS topic2,
+        log.topic3 AS topic3,
+        log.data AS data
+      FROM (
+        SELECT _id FROM evm_receipt_log
+        WHERE address = ${token.contractAddress} AND topic1 = ${TransferABI.id}
+          AND ((topic2 IN ${topicAddresses}) OR (topic3 IN ${topicAddresses}))
+        ORDER BY _id ${{raw: order}}
+        LIMIT ${offset}, ${limit}
+      ) list
+      INNER JOIN evm_receipt_log log USING (_id)
+      INNER JOIN evm_receipt receipt ON receipt._id = log.receipt_id
+      INNER JOIN header ON header.height = receipt.block_height
+      INNER JOIN transaction ON transaction._id = receipt.transaction_id
+      INNER JOIN qrc20 ON qrc20.contract_address = log.address
+      ORDER BY list._id ${{raw: order}}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+
+    let addresses = await this.ctx.service.contract.transformHexAddresses(
+      transactions.map(transaction => [transaction.topic2.slice(12), transaction.topic3.slice(12)]).flat()
+    )
+    return {
+      totalCount,
+      transactions: transactions.map((transaction, index) => {
+        let from = addresses[index * 2]
+        let to = addresses[index * 2 + 1]
+        let fromAddress = rawAddresses.find(address => Buffer.compare(address.data, transaction.topic2.slice(12)) === 0)
+        if (fromAddress) {
+          from = fromAddress.toString()
+        }
+        let toAddress = rawAddresses.find(address => Buffer.compare(address.data, transaction.topic3.slice(12)) === 0)
+        if (toAddress) {
+          to = toAddress.toString()
+        }
+        let value = BigInt(`0x${transaction.data.toString('hex')}`)
+        return {
+          transactionId: transaction.transactionId,
+          outputIndex: transaction.outputIndex,
+          blockHeight: transaction.blockHeight,
+          blockHash: transaction.blockHash,
+          timestamp: transaction.timestamp,
+          confirmations: this.app.blockchainInfo.tip.height - transaction.blockHeight + 1,
+          ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex} : {from},
+          ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex} : {to},
+          value,
+          amount: BigInt(Boolean(toAddress) - Boolean(fromAddress)) * value
+        }
+      })
+    }
   }
 
   async getUTXO(ids) {

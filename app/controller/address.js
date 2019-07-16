@@ -135,6 +135,29 @@ class AddressController extends Controller {
     }
   }
 
+  async qrc20TokenTransactions() {
+    let {ctx} = this
+    let {address, token} = ctx.state
+    let {totalCount, transactions} = await ctx.service.address.getAddressQRC20TokenTransactions(address.rawAddresses, token)
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(transaction => ({
+        transactionId: transaction.transactionId.toString('hex'),
+        outputIndex: transaction.outputIndex,
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash.toString('hex'),
+        timetamp: transaction.timetamp,
+        confirmations: transaction.confirmations,
+        from: transaction.from,
+        fromHex: transaction.fromHex && transaction.fromHex.toString('hex'),
+        to: transaction.to,
+        toHex: transaction.toHex && transaction.toHex.toString('hex'),
+        value: transaction.value.toString(),
+        amount: transaction.amount.toString()
+      }))
+    }
+  }
+
   async utxo() {
     let {ctx} = this
     let utxos = await ctx.service.address.getUTXO(ctx.state.address.addressIds)

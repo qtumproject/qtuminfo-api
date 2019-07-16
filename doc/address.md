@@ -6,6 +6,7 @@
   - [Address Transactions](#Address-Transactions)
   - [Address Basic Transactions](#Address-Basic-Transactions)
   - [Address Contract Transactions](#Address-Contract-Transactions)
+  - [Address QRC20 Token Transactions](#Address-QRC20-Token-Transactions)
   - [Address UTXO List](#Address-UTXO-List)
   - [Address Balance History](#Address-Balance-History)
   - [Address QRC20 Balance History](#Address-QRC20-Balance-History)
@@ -776,6 +777,119 @@ GET /address/QZDJya5Szfux2op7qhHUGKsBT4eGiyTPkH/contract-txs?limit=3&offset=10&f
           "data": "e38090e5b08fe7bb84e8b59be3809136e69c883136e697a5e4b896e7958ce69daf43e7bb84e6b395e59bbd20565320e6beb3e5a4a7e588a9e4ba9aefbc8ce6af94e8b59be7bb93e69e9ce698afefbc9f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000496e76616c696400000000000000000000000000000000000000000000000000e6b395e59bbde8839c207c20456e6572676f20e586a0e5908d00000000000000e6beb3e5a4a7e588a9e4ba9ae8839c0000000000000000000000000000000000e5b9b3e5b18000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000002540be400"
         }
       ]
+    }
+  ]
+}
+```
+
+
+## Address QRC20 Token Transactions
+
+**Request URL**
+```
+GET /address/:address/qrc20-txs
+```
+
+**Request Parameters**
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Pagination-Parameters">
+                Pagination Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+              <a href="https://github.com/qtumproject/qtuminfo-api/blob/master/README.md#Block--Timestamp-Filter-Parameters">
+                Block / Timestamp Filter Parameters
+              </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+              <code>reversed</code>
+            </td>
+            <td>
+              <code>true</code>
+            </td>
+            <td>Return records reversed</td>
+        </tr>
+    </tbody>
+</table>
+
+**Request**
+```
+GET /address/QXUANYANRVAeX2Tomy9W1FTV6LQxWiNc99/qrc20-txs
+```
+
+**Response**
+```json
+{
+  "totalCount": 5,
+  "transactions": [
+    {
+      "transactionId": "0a357149342eb76b4cc95d2c129a0551cbe7b658ef9fd982b6bc63216ca44d4d",
+      "outputIndex": 3,
+      "blockHeight": 204018,
+      "blockHash": "43c49f64124304654cc5083cd8d120ef251cf7193c0e0444f13ebcb2af0fbe85",
+      "confirmations": 206131,
+      "from": "QXUANYANRVAeX2Tomy9W1FTV6LQxWiNc99",
+      "to": "QjUudMFoQYtgxAfdziYbW8CGjbafZcFzkw",
+      "value": "1000000000",
+      "amount": "-1000000000"
+    },
+    {
+      "transactionId": "0a357149342eb76b4cc95d2c129a0551cbe7b658ef9fd982b6bc63216ca44d4d",
+      "outputIndex": 2,
+      "blockHeight": 204018,
+      "blockHash": "43c49f64124304654cc5083cd8d120ef251cf7193c0e0444f13ebcb2af0fbe85",
+      "confirmations": 206131,
+      "from": "QXUANYANRVAeX2Tomy9W1FTV6LQxWiNc99",
+      "to": "QjUudMFoQYtgxAfdziYbW8CGjbafZcFzkw",
+      "value": "1000000000",
+      "amount": "-1000000000"
+    },
+    {
+      "transactionId": "1e7ac9c6a1bce955ce8792130618779b0a4f9b36ad38b4aafb7f2124254010d8",
+      "outputIndex": 3,
+      "blockHeight": 204005,
+      "blockHash": "57314f2f664c694c345c27ab840a2134ff9b62bb9b652a03e9e64e3a22916c4e",
+      "confirmations": 206144,
+      "from": "QXUANYANRVAeX2Tomy9W1FTV6LQxWiNc99",
+      "to": "QTNVVw4V62nHWBZFrQ5pgpgJSMGgGoGyUL",
+      "value": "1000000000",
+      "amount": "-1000000000"
+    },
+    {
+      "transactionId": "1e7ac9c6a1bce955ce8792130618779b0a4f9b36ad38b4aafb7f2124254010d8",
+      "outputIndex": 2,
+      "blockHeight": 204005,
+      "blockHash": "57314f2f664c694c345c27ab840a2134ff9b62bb9b652a03e9e64e3a22916c4e",
+      "confirmations": 206144,
+      "from": "QXUANYANRVAeX2Tomy9W1FTV6LQxWiNc99",
+      "to": "QTNVVw4V62nHWBZFrQ5pgpgJSMGgGoGyUL",
+      "value": "1000000000",
+      "amount": "-1000000000"
+    },
+    {
+      "transactionId": "759610fd4f90bed7f44ee5d1c0066b82904577c2c2c44ba9ab5136e65145970c",
+      "outputIndex": 0,
+      "blockHeight": 115492,
+      "blockHash": "6234d4ff8412cd3fff6c0f986926514de6530e8b3dd0d0f65548ecfcd5db273f",
+      "confirmations": 294657,
+      "from": "QhYM98q7N3Si5ajFbpHpkEccoE6CSxNYez",
+      "to": "QXUANYANRVAeX2Tomy9W1FTV6LQxWiNc99",
+      "value": "63572945840",
+      "amount": "63572945840"
     }
   ]
 }

@@ -20,6 +20,7 @@
   * [Address Transactions](https://github.com/qtumproject/qtuminfo-api/blob/master/doc/address.md#Address-Transactions)
   * [Address Basic Transactions](https://github.com/qtumproject/qtuminfo-api/blob/master/doc/address.md#Address-Basic-Transactions)
   * [Address Contract Transactions](https://github.com/qtumproject/qtuminfo-api/blob/master/doc/address.md#Address-Contract-Transactions)
+  * [Address QRC20 Token Transactions](https://github.com/qtumproject/qtuminfo-api/blob/master/doc/address.md#Address-QRC20-Token-Transactions)
   * [Address UTXO List](https://github.com/qtumproject/qtuminfo-api/blob/master/doc/address.md#Address-UTXO-List)
   * [Address Balance History](https://github.com/qtumproject/qtuminfo-api/blob/master/doc/address.md#Address-Balance-History)
   * [Address QRC20 Balance History](https://github.com/qtumproject/qtuminfo-api/blob/master/doc/address.md#Address-QRC20-Balance-History)

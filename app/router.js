@@ -77,6 +77,11 @@ module.exports = app => {
     controller.address.contractTransactions
   )
   router.get(
+    '/address/:address/qrc20-txs/:token',
+    addressMiddleware, middleware.contract('token'), paginationMiddleware,
+    controller.address.qrc20TokenTransactions
+  )
+  router.get(
     '/address/:address/utxo',
     addressMiddleware,
     controller.address.utxo
