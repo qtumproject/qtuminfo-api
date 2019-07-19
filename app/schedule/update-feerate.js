@@ -13,7 +13,7 @@ class UpdateFeerateSubscription extends Subscription {
     if (feeRate) {
       await this.app.redis.hset(this.app.name, 'feerate', JSON.stringify(feeRate))
       this.app.io.of('/').to('blockchain')
-        .emit('feerate', feeRate)
+        .emit('feerate', feeRate.find(item => item.blocks === 10).feeRate)
     }
   }
 }

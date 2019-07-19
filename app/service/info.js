@@ -68,12 +68,12 @@ class InfoService extends Service {
     let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
     let results = await Promise.all([2, 4, 6, 10, 12, 24].map(blocks => client.estimatesmartfee(blocks)))
     return [
-      {blocks: 2, feeRate: results[0].feerate},
-      {blocks: 4, feeRate: results[1].feerate},
-      {blocks: 6, feeRate: results[2].feerate},
-      {blocks: 10, feeRate: results[3].feerate},
-      {blocks: 12, feeRate: results[4].feerate},
-      {blocks: 24, feeRate: results[5].feerate}
+      {blocks: 2, feeRate: results[0].feerate || 0.004},
+      {blocks: 4, feeRate: results[1].feerate || 0.004},
+      {blocks: 6, feeRate: results[2].feerate || 0.004},
+      {blocks: 10, feeRate: results[3].feerate || 0.004},
+      {blocks: 12, feeRate: results[4].feerate || 0.004},
+      {blocks: 24, feeRate: results[5].feerate || 0.004}
     ]
   }
 
