@@ -84,6 +84,38 @@ class MiscService extends Service {
 
     return {}
   }
+
+  async getPrices() {
+    const coinId = 1684
+    let [USDResult, CNYResult] = await Promise.all([
+      this.ctx.curl('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
+        headers: {
+          'X-CMC_PRO_API_KEY': '00000000-0000-0000-0000-000000000000',
+          Accept: 'application/json'
+        },
+        data: {
+          id: coinId,
+          convert: 'USD'
+        },
+        dataType: 'json'
+      }),
+      this.ctx.curl('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
+        headers: {
+          'X-CMC_PRO_API_KEY': '00000000-0000-0000-0000-000000000000',
+          Accept: 'application/json'
+        },
+        data: {
+          id: coinId,
+          convert: 'CNY'
+        },
+        dataType: 'json'
+      })
+    ])
+    return {
+      USD: USDResult.data.data[coinId].quote.USD.price,
+      CNY: CNYResult.data.data[coinId].quote.CNY.price
+    }
+  }
 }
 
 module.exports = MiscService

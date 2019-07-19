@@ -9,6 +9,7 @@ module.exports = app => {
   router.get('/supply', controller.info.supply)
   router.get('/total-max-supply', controller.info.totalMaxSupply)
   router.get('/circulating-supply', controller.info.circulatingSupply)
+  router.get('/feerates', controller.info.feeRates)
 
   router.get('/blocks', controller.block.list)
   router.get('/block/:block', controller.block.block)
@@ -174,6 +175,7 @@ module.exports = app => {
     paginationMiddleware,
     controller.misc.biggestMiners
   )
+  router.get('/misc/prices', controller.misc.prices)
 
   router.get('/stats/daily-transactions', controller.statistics.dailyTransactions)
   router.get('/stats/block-interval', controller.statistics.blockInterval)

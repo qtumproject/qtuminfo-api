@@ -2,7 +2,7 @@ const {Controller} = require('egg')
 
 class InfoController extends Controller {
   async index() {
-    this.ctx.body = this.ctx.service.info.getInfo()
+    this.ctx.body = await this.ctx.service.info.getInfo()
   }
 
   async supply() {
@@ -15,6 +15,10 @@ class InfoController extends Controller {
 
   async circulatingSupply() {
     this.ctx.body = this.ctx.service.info.getInfo().circulatingSupply
+  }
+
+  async feeRates() {
+    this.ctx.body = JSON.parse(await this.app.redis.hget(this.app.name, 'feerate')).filter(item => [2, 4, 6, 12, 24].includes(item.blocks))
   }
 }
 

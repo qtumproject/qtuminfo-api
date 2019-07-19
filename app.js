@@ -1,9 +1,6 @@
 module.exports = app => {
   app.blockchainInfo = {
-    tip: null,
-    stakeWeight: null,
-    feeRate: null,
-    dgpInfo: null
+    tip: null
   }
   const namespace = app.io.of('/')
 
@@ -42,19 +39,19 @@ module.exports = app => {
   app.messenger.on('update-stakeweight', async () => {
     let ctx = app.createAnonymousContext()
     let stakeWeight = await ctx.service.info.getStakeWeight()
-    app.messenger.sendToAgent('stakeweight', stakeWeight)
+    await app.redis.hset(app.name, 'stakeweight', JSON.stringify(stakeWeight))
+    namespace.to('blockchain').emit('stakeweight', stakeWeight)
   })
 
   app.messenger.on('update-feerate', async () => {
-    let ctx = app.createAnonymousContext()
-    let feeRate = await ctx.service.info.getFeeRate()
-    app.messenger.sendToAgent('feerate', feeRate)
+    await app.runSchedule('update-feerate')
   })
 
   app.messenger.on('update-dgpinfo', async () => {
     let ctx = app.createAnonymousContext()
     let dgpInfo = await ctx.service.info.getDGPInfo()
-    app.messenger.sendToAgent('dgpinfo', dgpInfo)
+    await app.redis.hset(app.name, 'dgpinfo', JSON.stringify(dgpInfo))
+    namespace.to('blockchain').emit('dgpinfo', dgpInfo)
   })
 
   app.messenger.on('blockchain-info', info => {
@@ -68,15 +65,6 @@ module.exports = app => {
   })
   app.messenger.on('reorg-to-block', block => {
     app.blockchainInfo.tip = block
-  })
-  app.messenger.on('stakeweight', stakeWeight => {
-    app.blockchainInfo.stakeWeight = stakeWeight
-  })
-  app.messenger.on('feerate', feeRate => {
-    app.blockchainInfo.feeRate = feeRate
-  })
-  app.messenger.on('dgpinfo', dgpInfo => {
-    app.blockchainInfo.dgpInfo = dgpInfo
   })
 
   app.messenger.on('socket/block-tip', async tip => {
@@ -112,15 +100,5 @@ module.exports = app => {
     for (let address of addresses) {
       namespace.to(`address/${address}`).emit('address/transaction', {address, id: id.toString('hex')})
     }
-  })
-
-  app.messenger.on('socket/stakeweight', stakeWeight => {
-    namespace.to('blockchain').emit('stakeweight', stakeWeight)
-  })
-  app.messenger.on('socket/feerate', feeRate => {
-    namespace.to('blockchain').emit('feerate', feeRate)
-  })
-  app.messenger.on('socket/dgpinfo', dgpInfo => {
-    namespace.to('blockchain').emit('dgpinfo', dgpInfo)
   })
 }

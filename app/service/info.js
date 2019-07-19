@@ -1,15 +1,18 @@
 const {Service} = require('egg')
 
 class InfoService extends Service {
-  getInfo() {
-    let info = this.app.blockchainInfo
+  async getInfo() {
+    let height = this.app.blockchainInfo.tip.height
+    let stakeWeight = JSON.parse(await this.app.redis.hget(this.app.name, 'stakeweight')) || 0
+    let feeRate = JSON.parse(await this.app.redis.hget(this.app.name, 'feerate')).find(item => item.blocks === 10).feeRate || 0.004
+    let dgpInfo = JSON.parse(await this.app.redis.hget(this.app.name, 'dgpinfo')) || {}
     return {
-      height: info.tip.height,
-      supply: this.getTotalSupply(info.tip.height),
-      circulatingSupply: this.getCirculatingSupply(info.tip.height),
-      netStakeWeight: Math.round(info.stakeWeight),
-      feeRate: info.feeRate,
-      dgpInfo: info.dgpInfo
+      height,
+      supply: this.getTotalSupply(height),
+      circulatingSupply: this.getCirculatingSupply(height),
+      netStakeWeight: Math.round(stakeWeight),
+      feeRate,
+      dgpInfo
     }
   }
 
@@ -61,10 +64,17 @@ class InfoService extends Service {
     return sum * 2 ** 32 * 16 / interval
   }
 
-  async getFeeRate() {
+  async getFeeRates() {
     let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
-    let info = await client.estimatesmartfee(10)
-    return info.feerate
+    let results = await Promise.all([2, 4, 6, 10, 12, 24].map(blocks => client.estimatesmartfee(blocks)))
+    return [
+      {blocks: 2, feeRate: results[0].feerate},
+      {blocks: 4, feeRate: results[1].feerate},
+      {blocks: 6, feeRate: results[2].feerate},
+      {blocks: 10, feeRate: results[3].feerate},
+      {blocks: 12, feeRate: results[4].feerate},
+      {blocks: 24, feeRate: results[5].feerate}
+    ]
   }
 
   async getDGPInfo() {

@@ -35,6 +35,10 @@ class MiscController extends Controller {
       }))
     }
   }
+
+  async prices() {
+    this.ctx.body = JSON.parse(await this.app.redis.hget(this.app.name, 'qtum-price'))
+  }
 }
 
 module.exports = MiscController
