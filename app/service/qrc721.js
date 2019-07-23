@@ -24,6 +24,7 @@ class QRC721Service extends Service {
       ) list
       INNER JOIN qrc721 USING (contract_address)
       INNER JOIN contract ON contract.address = list.contract_address
+      ORDER BY holders DESC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
 
     return {

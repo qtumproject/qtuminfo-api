@@ -27,6 +27,7 @@ class QRC20Service extends Service {
       ) list
       INNER JOIN qrc20 USING (contract_address)
       INNER JOIN contract ON contract.address = list.contract_address
+      ORDER BY transactions DESC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
 
     return {
@@ -317,13 +318,14 @@ class QRC20Service extends Service {
         list.topic3 AS topic3,
         list.data AS data
       FROM (
-        SELECT receipt_id, topic2, topic3, data FROM evm_receipt_log
+        SELECT _id, receipt_id, topic2, topic3, data FROM evm_receipt_log
         WHERE address = ${contractAddress} AND topic1 = ${TransferABI.id} AND ${this.ctx.service.block.getRawBlockFilter()}
         ORDER BY _id ${{raw: order}} LIMIT ${offset}, ${limit}
       ) list
       INNER JOIN evm_receipt ON evm_receipt._id = list.receipt_id
       INNER JOIN transaction ON transaction._id = evm_receipt.transaction_id
       INNER JOIN header ON header.height = evm_receipt.block_height
+      ORDER BY list._id ${{raw: order}}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
 
     let addresses = await this.ctx.service.contract.transformHexAddresses(

@@ -126,8 +126,8 @@ class BlockService extends Service {
       FROM (
         SELECT hash, height, timestamp FROM header
         WHERE timestamp BETWEEN ${min} AND ${max - 1}
-        ORDER BY height ASC
       ) l, block, address WHERE l.height = block.height AND address._id = block.miner_id
+      ORDER BY l.height ASC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     if (blocks.length === 0) {
       return []
@@ -147,6 +147,7 @@ class BlockService extends Service {
         ORDER BY height DESC
         LIMIT ${count}
       ) l, header, address WHERE l.height = header.height AND l.miner_id = address._id
+      ORDER BY l.height DESC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     if (blocks.length === 0) {
       return []
@@ -255,6 +256,7 @@ class BlockService extends Service {
       ) list
       INNER JOIN address ON address._id = list.miner_id
       LEFT JOIN rich_list ON rich_list.address_id = address._id
+      ORDER BY blocks DESC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return {
       totalCount,
