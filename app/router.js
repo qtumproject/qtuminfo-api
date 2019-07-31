@@ -58,6 +58,11 @@ module.exports = app => {
     controller.address.matureBalance
   )
   router.get(
+    '/address/:address/qrc20-balance/:token',
+    addressMiddleware, middleware.contract('token'),
+    controller.address.qrc20TokenBalance
+  )
+  router.get(
     '/address/:address/txs',
     addressMiddleware, paginationMiddleware, blockFilterMiddleware,
     controller.address.transactions

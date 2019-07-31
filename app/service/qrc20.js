@@ -79,6 +79,32 @@ class QRC20Service extends Service {
     }))
   }
 
+  async getQRC20Balance(rawAddresses, tokenAddress) {
+    const {Address} = this.app.qtuminfo.lib
+    const {Qrc20: QRC20, Qrc20Balance: QRC20Balance} = this.ctx.model
+    const {in: $in} = this.app.Sequelize.Op
+    let hexAddresses = rawAddresses
+      .filter(address => [Address.PAY_TO_PUBLIC_KEY_HASH, Address.CONTRACT, Address.EVM_CONTRACT].includes(address.type))
+      .map(address => address.data)
+    if (hexAddresses.length === 0) {
+      return []
+    }
+    let token = await QRC20.findOne({
+      where: {contractAddress: tokenAddress},
+      attributes: ['decimals'],
+      transaction: this.ctx.state.transaction
+    })
+    let list = await QRC20Balance.findAll({
+      where: {contractAddress: tokenAddress, address: {[$in]: hexAddresses}},
+      attributes: ['balance'],
+      transaction: this.ctx.state.transaction
+    })
+    return {
+      balance: list.map(({balance}) => balance).reduce((x, y) => x + y, 0n),
+      decimals: token.decimals
+    }
+  }
+
   async getQRC20BalanceHistory(addresses, tokenAddress) {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model

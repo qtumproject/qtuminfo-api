@@ -69,6 +69,19 @@ class AddressController extends Controller {
     ctx.body = unconfirmed.toString()
   }
 
+  async qrc20TokenBalance() {
+    let {ctx} = this
+    let {address, token} = ctx.state
+    if (token.type !== 'qrc20') {
+      ctx.body = {}
+    }
+    let {balance, decimals} = await ctx.service.qrc20.getQRC20Balance(address.rawAddresses, token.contractAddress)
+    ctx.body = {
+      balance: balance.toString(),
+      decimals
+    }
+  }
+
   async transactions() {
     let {ctx} = this
     let {address} = ctx.state
