@@ -34,6 +34,12 @@
   * [QRC20 list](https://github.com/qtumproject/qtuminfo-api/blob/master/doc/contract.md#QRC20-list)
   * [QRC20 Transaction list](https://github.com/qtumproject/qtuminfo-api/blob/master/doc/contract.md#QRC20-Transaction-list)
 
+
+## API Endpoint
+* `https://qtum.info/api/` for mainnet
+* `https://testnet.qtum.info/api/` for testnet
+
+
 ## Pagination Parameters
 
 You may use one of 3 forms below, all indices count from 0, maximum 100 records per page:
