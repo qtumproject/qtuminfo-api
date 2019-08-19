@@ -1,15 +1,15 @@
 # Address API
 
-- [Address API](#Address-API)
-  - [Address Information](#Address-Information)
-  - [Address Balance](#Address-Balance)
-  - [Address Transactions](#Address-Transactions)
-  - [Address Basic Transactions](#Address-Basic-Transactions)
-  - [Address Contract Transactions](#Address-Contract-Transactions)
-  - [Address QRC20 Token Transactions](#Address-QRC20-Token-Transactions)
-  - [Address UTXO List](#Address-UTXO-List)
-  - [Address Balance History](#Address-Balance-History)
-  - [Address QRC20 Balance History](#Address-QRC20-Balance-History)
+- [Address API](#address-api)
+  - [Address Information](#address-information)
+  - [Address Balance](#address-balance)
+  - [Address Transactions](#address-transactions)
+  - [Address Basic Transactions](#address-basic-transactions)
+  - [Address Contract Transactions](#address-contract-transactions)
+  - [Address QRC20 Token Transactions](#address-qrc20-token-transactions)
+  - [Address UTXO List](#address-utxo-list)
+  - [Address Balance History](#address-balance-history)
+  - [Address QRC20 Balance History](#address-qrc20-balance-history)
 
 
 ## Address Information
@@ -787,7 +787,7 @@ GET /address/QZDJya5Szfux2op7qhHUGKsBT4eGiyTPkH/contract-txs?limit=3&offset=10&f
 
 **Request URL**
 ```
-GET /address/:address/qrc20-txs
+GET /address/:address/qrc20-txs/:tokenAddress
 ```
 
 **Request Parameters**
@@ -828,7 +828,7 @@ GET /address/:address/qrc20-txs
 
 **Request**
 ```
-GET /address/QXUANYANRVAeX2Tomy9W1FTV6LQxWiNc99/qrc20-txs
+GET /address/QXUANYANRVAeX2Tomy9W1FTV6LQxWiNc99/qrc20-txs/fe59cbc1704e89a698571413a81f0de9d8f00c69
 ```
 
 **Response**
