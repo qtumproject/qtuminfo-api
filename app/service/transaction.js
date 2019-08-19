@@ -636,6 +636,7 @@ class TransactionService extends Service {
     if (!brief) {
       result.scriptPubKey.hex = output.scriptPubKey.toString('hex')
       result.scriptPubKey.asm = scriptPubKey.toString()
+      result.isRefund = output.isRefund
     }
     if (output.spentTxId) {
       result.spentTxId = output.spentTxId.toString('hex')
