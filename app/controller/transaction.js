@@ -47,6 +47,16 @@ class TransactionController extends Controller {
     ))
   }
 
+  async list() {
+    const {ctx} = this
+    let {totalCount, ids} = await ctx.service.transaction.getAllTransactions()
+    let transactions = await Promise.all(ids.map(id => ctx.service.transaction.getTransaction(id)))
+    ctx.body = {
+      totalCount,
+      transactions: await Promise.all(transactions.map(tx => ctx.service.transaction.transformTransaction(tx)))
+    }
+  }
+
   async send() {
     const {ctx} = this
     let {rawtx: data} = ctx.request.body

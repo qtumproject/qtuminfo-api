@@ -16,6 +16,11 @@ module.exports = app => {
   router.get('/raw-block/:block', controller.block.rawBlock)
   router.get('/recent-blocks', controller.block.recent)
 
+  router.get(
+    '/tx/list',
+    paginationMiddleware,
+    controller.transaction.list
+  )
   router.get('/tx/:id', controller.transaction.transaction)
   router.get('/txs/:ids', controller.transaction.transactions)
   router.get('/raw-tx/:id', controller.transaction.rawTransaction)

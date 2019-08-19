@@ -481,6 +481,25 @@ class TransactionService extends Service {
     })).map(tx => tx.id)
   }
 
+  async getAllTransactions() {
+    const db = this.ctx.model
+    const {Transaction} = db
+    const {sql} = this.ctx.helper
+    let {limit, offset} = this.ctx.state.pagination
+    let totalCount = await Transaction.count({transaction: this.ctx.state.transaction}) - 5001
+    let list = await db.query(sql`
+      SELECT transaction.id AS id FROM transaction, (
+        SELECT _id FROM transaction
+        WHERE block_height > 0 AND (block_height <= 5000 OR index_in_block > 0)
+        ORDER BY block_height DESC, index_in_block DESC, _id DESC
+        LIMIT ${offset}, ${limit}
+      ) list
+      WHERE transaction._id = list._id
+      ORDER BY transaction.block_height DESC, transaction.index_in_block DESC, transaction._id DESC
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    return {totalCount, ids: list.map(({id}) => id)}
+  }
+
   async getMempoolTransactionAddresses(id) {
     const {Address: RawAddress} = this.app.qtuminfo.lib
     const {Address, Transaction, BalanceChange, EvmReceipt: EVMReceipt} = this.ctx.model
