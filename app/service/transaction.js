@@ -561,8 +561,9 @@ class TransactionService extends Service {
     let inputs = transaction.inputs.map((input, index) => this.transformInput(input, index, transaction, {brief}))
     let outputs = transaction.outputs.map((output, index) => this.transformOutput(output, index, {brief}))
 
-    let [qrc20TokenTransfers, qrc721TokenTransfers] = await Promise.all([
+    let [qrc20TokenTransfers, qrc20TokenUnconfirmedTransfers, qrc721TokenTransfers] = await Promise.all([
       this.transformQRC20Transfers(transaction.outputs),
+      this.transformQRC20UnconfirmedTransfers(transaction.outputs),
       this.transformQRC721Transfers(transaction.outputs)
     ])
 
@@ -605,6 +606,7 @@ class TransactionService extends Service {
           : undefined
       },
       qrc20TokenTransfers,
+      qrc20TokenUnconfirmedTransfers,
       qrc721TokenTransfers
     }
   }
@@ -700,6 +702,52 @@ class TransactionService extends Service {
             })
           }
         }
+      }
+    }
+    if (result.length) {
+      return result
+    }
+  }
+
+  async transformQRC20UnconfirmedTransfers(outputs) {
+    const {OutputScript, Solidity} = this.app.qtuminfo.lib
+    const transferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'transfer')
+    const {Qrc20: QRC20} = this.ctx.model
+    let result = []
+    for (let output of outputs) {
+      if (output.evmReceipt) {
+        let qrc20 = await QRC20.findOne({
+          where: {contractAddress: output.addressHex},
+          attributes: ['name', 'symbol', 'decimals'],
+          transaction: this.ctx.state.transaction
+        })
+        if (!qrc20) {
+          continue
+        }
+        let scriptPubKey = OutputScript.fromBuffer(output.scriptPubKey)
+        if (![OutputScript.EVM_CONTRACT_CALL, OutputScript.EVM_CONTRACT_CALL_SENDER].includes(scriptPubKey.type)) {
+          continue
+        }
+        let byteCode = scriptPubKey.byteCode
+        if (byteCode.length !== 68
+          || Buffer.compare(byteCode.slice(0, 4), transferABI.id) !== 0
+          || Buffer.compare(byteCode.slice(4, 16), Buffer.alloc(12)) !== 0
+        ) {
+          continue
+        }
+        let from = output.evmReceipt.sender
+        let [to] = await this.ctx.service.contract.transformHexAddresses([byteCode.slice(16, 36)])
+        let value = BigInt(`0x${byteCode.slice(36).toString('hex')}`)
+        result.push({
+          address: output.address,
+          addressHex: output.addressHex.toString('hex'),
+          name: qrc20.name,
+          symbol: qrc20.symbol,
+          decimals: qrc20.decimals,
+          from,
+          ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex.toString('hex')} : {to},
+          value: value.toString()
+        })
       }
     }
     if (result.length) {

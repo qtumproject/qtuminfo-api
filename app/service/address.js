@@ -308,6 +308,89 @@ class AddressService extends Service {
     }
   }
 
+  async getAddressQRC20TokenMempoolTransactions(rawAddresses, token) {
+    const {Address: RawAddress, OutputScript, Solidity} = this.app.qtuminfo.lib
+    const transferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'transfer')
+    const {Address, Transaction, TransactionOutput, Contract, EvmReceipt: EVMReceipt, where, col} = this.ctx.model
+    let hexAddresses = rawAddresses
+      .filter(address => address.type === RawAddress.PAY_TO_PUBLIC_KEY_HASH)
+      .map(address => address.data)
+    let transactions = await EVMReceipt.findAll({
+      where: {blockHeight: 0xffffffff},
+      attributes: ['outputIndex', 'senderData'],
+      include: [
+        {
+          model: Transaction,
+          as: 'transaction',
+          required: true,
+          attributes: ['id']
+        },
+        {
+          model: TransactionOutput,
+          as: 'output',
+          on: {
+            transactionId: where(col('output.transaction_id'), '=', col('evm_receipt.transaction_id')),
+            outputIndex: where(col('output.output_index'), '=', col('evm_receipt.output_index'))
+          },
+          required: true,
+          attributes: ['scriptPubKey'],
+          include: [{
+            model: Address,
+            as: 'address',
+            required: true,
+            attributes: [],
+            include: [{
+              model: Contract,
+              as: 'contract',
+              required: true,
+              where: {address: token.contractAddress, type: 'qrc20'},
+              attributes: []
+            }]
+          }]
+        },
+      ],
+      transaction: this.ctx.state.transaction
+    })
+
+    transactions = transactions.filter(transaction => {
+      let scriptPubKey = OutputScript.fromBuffer(transaction.output.scriptPubKey)
+      if (![OutputScript.EVM_CONTRACT_CALL, OutputScript.EVM_CONTRACT_CALL_SENDER].includes(scriptPubKey.type)) {
+        return false
+      }
+      let byteCode = scriptPubKey.byteCode
+      if (byteCode.length !== 68
+        || Buffer.compare(byteCode.slice(0, 4), transferABI.id) !== 0
+        || Buffer.compare(byteCode.slice(4, 16), Buffer.alloc(12)) !== 0
+      ) {
+        console.log(byteCode.length, byteCode.slice(4, 16).toString('hex'))
+        return false
+      }
+      let from = transaction.senderData
+      let to = byteCode.slice(16, 36)
+      let isFrom = hexAddresses.some(address => Buffer.compare(address, from) === 0)
+      let isTo = hexAddresses.some(address => Buffer.compare(address, to) === 0)
+      return isFrom || isTo
+    })
+    return await Promise.all(transactions.map(async transaction => {
+      let scriptPubKey = OutputScript.fromBuffer(transaction.output.scriptPubKey)
+      let byteCode = scriptPubKey.byteCode
+      let from = transaction.senderData
+      let to = byteCode.slice(16, 36)
+      let value = BigInt(`0x${byteCode.slice(36).toString('hex')}`)
+      let isFrom = hexAddresses.some(address => Buffer.compare(address, from) === 0)
+      let isTo = hexAddresses.some(address => Buffer.compare(address, to) === 0)
+      let addresses = await this.ctx.service.contract.transformHexAddresses([from, to])
+      return {
+        transactionId: transaction.transaction.id,
+        outputIndex: transaction.outputIndex,
+        ...from && typeof addresses[0] === 'object' ? {from: addresses[0].string, fromHex: addresses[0].hex} : {from: addresses[0]},
+        ...to && typeof addresses[1] === 'object' ? {to: addresses[1].string, toHex: addresses[1].hex} : {to: addresses[1]},
+        value,
+        amount: BigInt(isTo - isFrom) * value
+      }
+    }))
+  }
+
   async getUTXO(ids) {
     const {Address, Transaction, TransactionOutput} = this.ctx.model
     const {in: $in, gt: $gt} = this.app.Sequelize.Op

@@ -50,7 +50,13 @@ class QRC20Service extends Service {
     if (hexAddresses.length === 0) {
       return []
     }
-    const {Contract, Qrc20: QRC20, Qrc20Balance: QRC20Balance} = this.ctx.model
+    const {OutputScript, Solidity} = this.app.qtuminfo.lib
+    const transferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'transfer')
+    const {
+      Address, TransactionOutput,
+      Contract, EvmReceipt: EVMReceipt, Qrc20: QRC20, Qrc20Balance: QRC20Balance,
+      where, col
+    } = this.ctx.model
     const {in: $in} = this.app.Sequelize.Op
     let list = await QRC20.findAll({
       attributes: ['contractAddress', 'name', 'symbol', 'decimals'],
@@ -69,29 +75,117 @@ class QRC20Service extends Service {
       }],
       transaction: this.ctx.state.transaction
     })
-    return list.map(item => ({
-      address: item.contract.addressString,
-      addressHex: item.contractAddress,
-      name: item.name,
-      symbol: item.symbol,
-      decimals: item.decimals,
-      balance: item.contract.qrc20Balances.map(({balance}) => balance).reduce((x, y) => x + y)
-    }))
+    let mapping = new Map(list.map(item => [
+      item.contract.addressString,
+      {
+        address: item.contract.addressString,
+        addressHex: item.contractAddress,
+        name: item.name,
+        symbol: item.symbol,
+        decimals: item.decimals,
+        balance: item.contract.qrc20Balances.map(({balance}) => balance).reduce((x, y) => x + y),
+        unconfirmed: {
+          received: 0n,
+          sent: 0n
+        }
+      }
+    ]))
+    let unconfirmedList = await EVMReceipt.findAll({
+      where: {blockHeight: 0xffffffff},
+      attributes: ['senderData'],
+      include: [
+        {
+          model: TransactionOutput,
+          as: 'output',
+          on: {
+            transactionId: where(col('output.transaction_id'), '=', col('evm_receipt.transaction_id')),
+            outputIndex: where(col('output.output_index'), '=', col('evm_receipt.output_index'))
+          },
+          required: true,
+          attributes: ['scriptPubKey'],
+          include: [{
+            model: Address,
+            as: 'address',
+            required: true,
+            attributes: [],
+            include: [{
+              model: Contract,
+              as: 'contract',
+              required: true,
+              attributes: ['address', 'addressString'],
+              include: [{
+                model: QRC20,
+                as: 'qrc20',
+                required: true,
+                attributes: ['name', 'symbol', 'decimals']
+              }]
+            }]
+          }]
+        }
+      ],
+      transaction: this.ctx.state.transaction
+    })
+    for (let item of unconfirmedList) {
+      let scriptPubKey = OutputScript.fromBuffer(item.output.scriptPubKey)
+      if (![OutputScript.EVM_CONTRACT_CALL, OutputScript.EVM_CONTRACT_CALL_SENDER].includes(scriptPubKey.type)) {
+        continue
+      }
+      let byteCode = scriptPubKey.byteCode
+      if (byteCode.length === 68
+        && Buffer.compare(byteCode.slice(0, 4), transferABI.id) === 0
+        && Buffer.compare(byteCode.slice(4, 16), Buffer.alloc(12)) === 0
+      ) {
+        let data = {}
+        if (mapping.has(item.address.contract.addressString)) {
+          data = mapping.get(item.address.contract.addressString)
+        } else {
+          data = {
+            address: item.address.contract.address,
+            addressHex: item.address.contract.addressString,
+            name: item.address.contract.qrc20.name,
+            symbol: item.address.contract.qrc20.symbol,
+            decimals: item.address.contract.qrc20.decimals,
+            balance: 0n,
+            unconfirmed: {
+              received: 0n,
+              sent: 0n
+            }
+          }
+          mapping.set(item.address.contract.addressString, data)
+        }
+        let from = item.senderData
+        let to = byteCode.slice(16, 36)
+        let value = BigInt(`0x${byteCode.slice(36).toString('hex')}`)
+        let isFrom = hexAddresses.some(address => Buffer.compare(address, from) === 0)
+        let isTo = hexAddresses.some(address => Buffer.compare(address, to) === 0)
+        if (isFrom && !isTo) {
+          data.unconfirmed.sent += value
+        } else if (!isFrom && isTo) {
+          data.unconfirmed.received += value
+        }
+      }
+    }
+    return [...mapping.values()]
   }
 
   async getQRC20Balance(rawAddresses, tokenAddress) {
-    const {Address} = this.app.qtuminfo.lib
-    const {Qrc20: QRC20, Qrc20Balance: QRC20Balance} = this.ctx.model
+    const {Address: RawAddress, OutputScript, Solidity} = this.app.qtuminfo.lib
+    const transferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'transfer')
+    const {
+      Address, TransactionOutput,
+      Contract, EvmReceipt: EVMReceipt, Qrc20: QRC20, Qrc20Balance: QRC20Balance,
+      where, col
+    } = this.ctx.model
     const {in: $in} = this.app.Sequelize.Op
     let hexAddresses = rawAddresses
-      .filter(address => [Address.PAY_TO_PUBLIC_KEY_HASH, Address.CONTRACT, Address.EVM_CONTRACT].includes(address.type))
+      .filter(address => [RawAddress.PAY_TO_PUBLIC_KEY_HASH, RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(address.type))
       .map(address => address.data)
     if (hexAddresses.length === 0) {
       return []
     }
     let token = await QRC20.findOne({
       where: {contractAddress: tokenAddress},
-      attributes: ['decimals'],
+      attributes: ['name', 'symbol', 'decimals'],
       transaction: this.ctx.state.transaction
     })
     let list = await QRC20Balance.findAll({
@@ -99,9 +193,66 @@ class QRC20Service extends Service {
       attributes: ['balance'],
       transaction: this.ctx.state.transaction
     })
+    let unconfirmedList = await EVMReceipt.findAll({
+      where: {blockHeight: 0xffffffff},
+      attributes: ['senderData'],
+      include: [{
+        model: TransactionOutput,
+        as: 'output',
+        on: {
+          transactionId: where(col('output.transaction_id'), '=', col('evm_receipt.transaction_id')),
+          outputIndex: where(col('output.output_index'), '=', col('evm_receipt.output_index'))
+        },
+        required: true,
+        attributes: ['scriptPubKey'],
+        include: [{
+          model: Address,
+          as: 'address',
+          required: true,
+          attributes: [],
+          include: [{
+            model: Contract,
+            as: 'contract',
+            required: true,
+            where: {address: tokenAddress},
+            attributes: []
+          }]
+        }]
+      }],
+      transaction: this.ctx.state.transaction
+    })
+    let unconfirmed = {
+      received: 0n,
+      sent: 0n
+    }
+    for (let item of unconfirmedList) {
+      let scriptPubKey = OutputScript.fromBuffer(item.output.scriptPubKey)
+      if (![OutputScript.EVM_CONTRACT_CALL, OutputScript.EVM_CONTRACT_CALL_SENDER].includes(scriptPubKey.type)) {
+        continue
+      }
+      let byteCode = scriptPubKey.byteCode
+      if (byteCode.length === 68
+        && Buffer.compare(byteCode.slice(0, 4), transferABI.id) === 0
+        && Buffer.compare(byteCode.slice(4, 16), Buffer.alloc(12)) === 0
+      ) {
+        let from = item.senderData
+        let to = byteCode.slice(16, 36)
+        let value = BigInt(`0x${byteCode.slice(36).toString('hex')}`)
+        let isFrom = hexAddresses.some(address => Buffer.compare(address, from) === 0)
+        let isTo = hexAddresses.some(address => Buffer.compare(address, to) === 0)
+        if (isFrom && !isTo) {
+          unconfirmed.sent += value
+        } else if (!isFrom && isTo) {
+          unconfirmed.received += value
+        }
+      }
+    }
     return {
+      name: token.name,
+      symbol: token.symbol,
+      decimals: token.decimals,
       balance: list.map(({balance}) => balance).reduce((x, y) => x + y, 0n),
-      decimals: token.decimals
+      unconfirmed
     }
   }
 
