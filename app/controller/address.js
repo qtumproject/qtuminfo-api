@@ -117,7 +117,8 @@ class AddressController extends Controller {
         inputValue: transaction.inputValue.toString(),
         outputValue: transaction.outputValue.toString(),
         refundValue: transaction.refundValue.toString(),
-        fees: transaction.fees.toString()
+        fees: transaction.fees.toString(),
+        type: transaction.type
       }))
     }
   }

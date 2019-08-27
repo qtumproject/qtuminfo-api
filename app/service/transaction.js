@@ -781,12 +781,12 @@ class TransactionService extends Service {
     }
   }
 
-  async getBasicTransaction(transactionId) {
-    const {Header, Transaction, TransactionOutput, TransactionInput, GasRefund, where, col} = this.ctx.model
+  async getBasicTransaction(transactionId, addressIds) {
+    const {Header, Transaction, TransactionOutput, TransactionInput, GasRefund, EvmReceipt: EVMReceipt, where, col} = this.ctx.model
 
     let transaction = await Transaction.findOne({
       where: {_id: transactionId},
-      attributes: ['id', 'blockHeight'],
+      attributes: ['id', 'blockHeight', 'indexInBlock'],
       include: [{
         model: Header,
         as: 'header',
@@ -808,6 +808,16 @@ class TransactionService extends Service {
       where: {transactionId},
       attributes: ['value', 'addressId'],
       include: [
+        {
+          model: EVMReceipt,
+          as: 'evmReceipt',
+          on: {
+            transactionId: where(col('evmReceipt.transaction_id'), '=', col('transaction_output.transaction_id')),
+            outputIndex: where(col('evmReceipt.output_index'), '=', col('transaction_output.output_index'))
+          },
+          required: false,
+          attributes: ['_id']
+        },
         {
           model: GasRefund,
           as: 'refund',
@@ -836,18 +846,12 @@ class TransactionService extends Service {
             outputIndex: where(col('refundTo.refund_index'), '=', col('transaction_output.output_index'))
           },
           required: false,
-          attributes: []
+          attributes: ['transactionId']
         }
       ],
       transaction: this.ctx.state.transaction
     })
 
-    let result = {id: transaction.id}
-    if (transaction.blockHeight !== 0xffffffff) {
-      result.blockHeight = transaction.blockHeight
-      result.blockHash = transaction.header.hash
-      result.timestamp = transaction.header.timestamp
-    }
     let inputValue = inputs.map(input => input.value).reduce((x, y) => x + y)
     let outputValue = outputs.map(output => output.value).reduce((x, y) => x + y)
     let refundValue = outputs
@@ -858,6 +862,24 @@ class TransactionService extends Service {
       .filter(output => output.refundTo)
       .map(output => output.value)
       .reduce((x, y) => x + y, 0n)
+    let amount = [
+      ...outputs.filter(output => addressIds.includes(output.addressId)).map(output => output.value),
+      ...inputs.filter(input => addressIds.includes(input.addressId)).map(input => -input.value)
+    ].reduce((x, y) => x + y, 0n)
+    let type = ''
+    if (addressIds.includes(inputs[0].addressId) && outputs.some(output => output.evmReceipt)) {
+      type = 'contract'
+    } else if (transaction.indexInBlock < 2 && (transaction.blockHeight > 5000 || transaction.indexInBlock === 0)) {
+      if (outputs.some(output => addressIds.includes(output.addressId) && !output.refundTo)) {
+        type = 'block-reward'
+      } else {
+        type = 'gas-refund'
+      }
+    } else if (amount > 0n) {
+      type = 'receive'
+    } else if (amount < 0n) {
+      type = 'send'
+    }
 
     return {
       id: transaction.id,
@@ -872,6 +894,8 @@ class TransactionService extends Service {
       outputValue,
       refundValue,
       fees: inputValue - outputValue - refundValue + refundToValue,
+      amount,
+      type
     }
   }
 

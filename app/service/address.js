@@ -162,14 +162,9 @@ class AddressService extends Service {
     }
 
     let transactions = await Promise.all(transactionIds.map(async transactionId => {
-      let transaction = await this.ctx.service.transaction.getBasicTransaction(transactionId)
-      let amount = [
-        ...transaction.outputs.filter(output => addressIds.includes(output.addressId)).map(output => output.value),
-        ...transaction.inputs.filter(input => addressIds.includes(input.addressId)).map(input => -input.value)
-      ].reduce((x, y) => x + y, 0n)
+      let transaction = await this.ctx.service.transaction.getBasicTransaction(transactionId, addressIds)
       return Object.assign(transaction, {
-        confirmations: transaction.blockHeight == null ? 0 : this.app.blockchainInfo.tip.height - transaction.blockHeight + 1,
-        amount
+        confirmations: transaction.blockHeight == null ? 0 : this.app.blockchainInfo.tip.height - transaction.blockHeight + 1
       })
     }))
     return {totalCount, transactions}
