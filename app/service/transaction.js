@@ -563,7 +563,7 @@ class TransactionService extends Service {
 
     let [qrc20TokenTransfers, qrc20TokenUnconfirmedTransfers, qrc721TokenTransfers] = await Promise.all([
       this.transformQRC20Transfers(transaction.outputs),
-      this.transformQRC20UnconfirmedTransfers(transaction.outputs),
+      confirmations === 0 ? this.transformQRC20UnconfirmedTransfers(transaction.outputs) : undefined,
       this.transformQRC721Transfers(transaction.outputs)
     ])
 
