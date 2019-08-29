@@ -107,7 +107,7 @@ class QRC20Service extends Service {
             model: Address,
             as: 'address',
             required: true,
-            attributes: [],
+            attributes: ['_id'],
             include: [{
               model: Contract,
               as: 'contract',
@@ -136,22 +136,22 @@ class QRC20Service extends Service {
         && Buffer.compare(byteCode.slice(4, 16), Buffer.alloc(12)) === 0
       ) {
         let data = {}
-        if (mapping.has(item.address.contract.addressString)) {
-          data = mapping.get(item.address.contract.addressString)
+        if (mapping.has(item.output.address.contract.addressString)) {
+          data = mapping.get(item.output.address.contract.addressString)
         } else {
           data = {
-            address: item.address.contract.address,
-            addressHex: item.address.contract.addressString,
-            name: item.address.contract.qrc20.name,
-            symbol: item.address.contract.qrc20.symbol,
-            decimals: item.address.contract.qrc20.decimals,
+            address: item.output.address.contract.address,
+            addressHex: item.output.address.contract.addressString,
+            name: item.output.address.contract.qrc20.name,
+            symbol: item.output.address.contract.qrc20.symbol,
+            decimals: item.output.address.contract.qrc20.decimals,
             balance: 0n,
             unconfirmed: {
               received: 0n,
               sent: 0n
             }
           }
-          mapping.set(item.address.contract.addressString, data)
+          mapping.set(item.output.address.contract.addressString, data)
         }
         let from = item.senderData
         let to = byteCode.slice(16, 36)
