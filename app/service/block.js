@@ -159,12 +159,13 @@ class BlockService extends Service {
   async getBlockRewards(startHeight, endHeight = startHeight + 1) {
     const db = this.ctx.model
     const {sql} = this.ctx.helper
+    const lastPoWBlockHeight = Math.min(this.app.chain.lastPoWBlockHeight, 0xffffffff)
     let rewards = await db.query(sql`
       SELECT SUM(value) AS value FROM (
         SELECT tx.block_height AS height, output.value AS value FROM transaction tx, transaction_output output
         WHERE
           tx.block_height BETWEEN ${startHeight} AND ${endHeight - 1}
-          AND ((tx.block_height <= 5000 AND tx.index_in_block = 0) OR (tx.block_height > 5000 AND tx.index_in_block = 1))
+          AND ((tx.block_height <= ${lastPoWBlockHeight} AND tx.index_in_block = 0) OR (tx.block_height > ${lastPoWBlockHeight} AND tx.index_in_block = 1))
           AND output.transaction_id = tx._id
           AND NOT EXISTS (
             SELECT refund_id FROM gas_refund
@@ -175,7 +176,7 @@ class BlockService extends Service {
         FROM transaction tx, transaction_input input
         WHERE
           tx.block_height BETWEEN ${startHeight} AND ${endHeight - 1}
-          AND ((tx.block_height <= 5000 AND tx.index_in_block = 0) OR (tx.block_height > 5000 AND tx.index_in_block = 1))
+          AND ((tx.block_height <= ${lastPoWBlockHeight} AND tx.index_in_block = 0) OR (tx.block_height > ${lastPoWBlockHeight} AND tx.index_in_block = 1))
           AND input.transaction_id = tx._id
       ) block_reward
       GROUP BY height
@@ -234,11 +235,12 @@ class BlockService extends Service {
   }
 
   async getBiggestMiners(lastNBlocks) {
+    const fromBlock = this.app.chain.lastPoWBlockHeight >= 0xffffffff ? this.app.chain.lastPoWBlockHeight : 1
     const db = this.ctx.model
     const {sql} = this.ctx.helper
     const {Block} = db
     const {gte: $gte} = this.app.Sequelize.Op
-    let fromBlockHeight = lastNBlocks == null ? 5001 : Math.max(this.app.blockchainInfo.height - lastNBlocks + 1, 5001)
+    let fromBlockHeight = lastNBlocks == null ? fromBlock : Math.max(this.app.blockchainInfo.height - lastNBlocks + 1, fromBlock)
     let {limit, offset} = this.ctx.state.pagination
     let totalCount = await Block.count({
       where: {height: {[$gte]: fromBlockHeight}},

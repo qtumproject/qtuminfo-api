@@ -9,7 +9,7 @@ class InfoService extends Service {
     return {
       height,
       supply: this.getTotalSupply(height),
-      circulatingSupply: this.getCirculatingSupply(height),
+      ...this.app.chain.name === 'mainnet' ? {circulatingSupply: this.getCirculatingSupply(height)} : {},
       netStakeWeight: Math.round(stakeWeight),
       feeRate,
       dgpInfo
@@ -17,13 +17,13 @@ class InfoService extends Service {
   }
 
   getTotalSupply(height) {
-    if (height <= 5000) {
+    if (height <= this.app.chain.lastPoWBlockHeight) {
       return height * 20000
     } else {
       let supply = 1e8
       let reward = 4
       let interval = 985500
-      let stakeHeight = height - 5000
+      let stakeHeight = height - this.app.chain.lastPoWBlockHeight
       let halvings = 0
       while (halvings < 7 && stakeHeight > interval) {
         supply += interval * reward / (1 << halvings++)
@@ -40,7 +40,7 @@ class InfoService extends Service {
 
   getCirculatingSupply(height) {
     let totalSupply = this.getTotalSupply(height)
-    if (this.app.config.qtum.chain === 'mainnet') {
+    if (this.app.chain.name === 'mainnet') {
       return totalSupply - 575e4
     } else {
       return totalSupply

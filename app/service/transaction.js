@@ -470,7 +470,7 @@ class TransactionService extends Service {
       where: {
         indexInBlock: {[$gt]: 0},
         [$or]: [
-          {blockHeight: {[$lte]: 5000}},
+          {blockHeight: {[$lte]: this.app.chain.lastPoWBlockHeight}},
           {indexInBlock: {[$gt]: 1}}
         ]
       },
@@ -490,7 +490,7 @@ class TransactionService extends Service {
     let list = await db.query(sql`
       SELECT transaction.id AS id FROM transaction, (
         SELECT _id FROM transaction
-        WHERE block_height > 0 AND (block_height <= 5000 OR index_in_block > 0)
+        WHERE block_height > 0 AND (block_height <= ${this.app.chain.lastPoWBlockHeight} OR index_in_block > 0)
         ORDER BY block_height DESC, index_in_block DESC, _id DESC
         LIMIT ${offset}, ${limit}
       ) list
@@ -869,7 +869,7 @@ class TransactionService extends Service {
     let type = ''
     if (addressIds.includes(inputs[0].addressId) && outputs.some(output => output.evmReceipt)) {
       type = 'contract'
-    } else if (transaction.indexInBlock < 2 && (transaction.blockHeight > 5000 || transaction.indexInBlock === 0)) {
+    } else if (transaction.indexInBlock < 2 && (transaction.blockHeight > this.app.chain.lastPoWBlockHeight || transaction.indexInBlock === 0)) {
       if (outputs.some(output => addressIds.includes(output.addressId) && !output.refundTo)) {
         type = 'block-reward'
       } else {
