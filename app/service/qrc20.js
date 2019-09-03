@@ -140,8 +140,8 @@ class QRC20Service extends Service {
           data = mapping.get(item.output.address.contract.addressString)
         } else {
           data = {
-            address: item.output.address.contract.address,
-            addressHex: item.output.address.contract.addressString,
+            address: item.output.address.contract.addressString,
+            addressHex: item.output.address.contract.address,
             name: item.output.address.contract.qrc20.name,
             symbol: item.output.address.contract.qrc20.symbol,
             decimals: item.output.address.contract.qrc20.decimals,
