@@ -8,15 +8,16 @@ class InfoService extends Service {
     let dgpInfo = JSON.parse(await this.app.redis.hget(this.app.name, 'dgpinfo')) || {}
     return {
       height,
-      supply: this.getTotalSupply(height),
-      ...this.app.chain.name === 'mainnet' ? {circulatingSupply: this.getCirculatingSupply(height)} : {},
+      supply: this.getTotalSupply(),
+      ...this.app.chain.name === 'mainnet' ? {circulatingSupply: this.getCirculatingSupply()} : {},
       netStakeWeight: Math.round(stakeWeight),
       feeRate,
       dgpInfo
     }
   }
 
-  getTotalSupply(height) {
+  getTotalSupply() {
+    let height = this.app.blockchainInfo.tip.height
     if (height <= this.app.chain.lastPoWBlockHeight) {
       return height * 20000
     } else {
@@ -38,7 +39,8 @@ class InfoService extends Service {
     return 1e8 + 985500 * 4 * (1 - 1 / 2 ** 7) / (1 - 1 / 2)
   }
 
-  getCirculatingSupply(height) {
+  getCirculatingSupply() {
+    let height = this.app.blockchainInfo.tip.height
     let totalSupply = this.getTotalSupply(height)
     if (this.app.chain.name === 'mainnet') {
       return totalSupply - 575e4

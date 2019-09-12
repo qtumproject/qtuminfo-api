@@ -6,7 +6,7 @@ class InfoController extends Controller {
   }
 
   async supply() {
-    this.ctx.body = this.ctx.service.info.getInfo().supply
+    this.ctx.body = this.ctx.service.info.getTotalSupply()
   }
 
   async totalMaxSupply() {
@@ -14,7 +14,7 @@ class InfoController extends Controller {
   }
 
   async circulatingSupply() {
-    this.ctx.body = this.ctx.service.info.getInfo().circulatingSupply
+    this.ctx.body = this.ctx.service.info.getCirculatingSupply()
   }
 
   async feeRates() {
