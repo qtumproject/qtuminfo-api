@@ -52,7 +52,7 @@ class InfoService extends Service {
     const {gte: $gte} = this.app.Sequelize.Op
     let height = await Header.aggregate('height', 'max', {transaction: this.ctx.state.transaction})
     let list = await Header.findAll({
-      where: {height: {[$gte]: height - 72}},
+      where: {height: {[$gte]: height - 500}},
       attributes: ['timestamp', 'bits'],
       order: [['height', 'ASC']],
       transaction: this.ctx.state.transaction
