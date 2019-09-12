@@ -67,3 +67,5 @@ exports.qtuminfo = {
     password: 'password'
   }
 }
+
+exports.cmcAPIKey = null

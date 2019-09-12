@@ -86,11 +86,15 @@ class MiscService extends Service {
   }
 
   async getPrices() {
+    let apiKey = this.app.config.cmcAPIKey
+    if (!apiKey) {
+      return {}
+    }
     const coinId = 1684
     let [USDResult, CNYResult] = await Promise.all([
       this.ctx.curl('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
         headers: {
-          'X-CMC_PRO_API_KEY': '00000000-0000-0000-0000-000000000000',
+          'X-CMC_PRO_API_KEY': apiKey,
           Accept: 'application/json'
         },
         data: {
@@ -101,7 +105,7 @@ class MiscService extends Service {
       }),
       this.ctx.curl('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
         headers: {
-          'X-CMC_PRO_API_KEY': '00000000-0000-0000-0000-000000000000',
+          'X-CMC_PRO_API_KEY': apiKey,
           Accept: 'application/json'
         },
         data: {
