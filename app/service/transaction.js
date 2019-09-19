@@ -628,13 +628,11 @@ class TransactionService extends Service {
       result.address = input.address
       result.addressHex = input.addressHex && input.addressHex.toString('hex')
       result.isInvalidContract = input.isInvalidContract
-      result.scriptSig = {type: scriptSig.type}
-      if (!brief) {
-        result.scriptSig.hex = input.scriptSig.toString('hex')
-        result.scriptSig.asm = scriptSig.toString()
-      }
     }
+    result.scriptSig = {type: scriptSig.type}
     if (!brief) {
+      result.scriptSig.hex = input.scriptSig.toString('hex')
+      result.scriptSig.asm = scriptSig.toString()
       result.sequence = input.sequence
     }
     if (transaction.flag) {
