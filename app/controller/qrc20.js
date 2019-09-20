@@ -7,7 +7,7 @@ class QRC20Controller extends Controller {
     ctx.body = {
       totalCount,
       tokens: tokens.map(item => ({
-        address: item.address,
+        address: item.addressHex.toString('hex'),
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
         symbol: item.symbol,

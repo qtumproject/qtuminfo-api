@@ -33,7 +33,7 @@ class QRC20Service extends Service {
     return {
       totalCount,
       tokens: list.map(item => ({
-        address: item.address,
+        address: item.addressHex.toString('hex'),
         addressHex: item.addressHex,
         name: item.name.toString(),
         symbol: item.symbol.toString(),
@@ -78,7 +78,7 @@ class QRC20Service extends Service {
     let mapping = new Map(list.map(item => [
       item.contract.addressString,
       {
-        address: item.contract.addressString,
+        address: item.contractAddress.toString('hex'),
         addressHex: item.contractAddress,
         name: item.name,
         symbol: item.symbol,
@@ -140,7 +140,7 @@ class QRC20Service extends Service {
           data = mapping.get(item.output.address.contract.addressString)
         } else {
           data = {
-            address: item.output.address.contract.addressString,
+            address: item.output.address.contract.address.toString('hex'),
             addressHex: item.output.address.contract.address,
             name: item.output.address.contract.qrc20.name,
             symbol: item.output.address.contract.qrc20.symbol,
@@ -445,7 +445,7 @@ class QRC20Service extends Service {
           item.amount += delta
         } else {
           result.tokens.push({
-            address,
+            address: log.address.toString('hex'),
             addressHex: log.address,
             name: log.qrc20.name.toString(),
             symbol: log.qrc20.symbol.toString(),
@@ -519,8 +519,8 @@ class QRC20Service extends Service {
           blockHeight: transaction.blockHeight,
           blockHash: transaction.blockHash,
           timestamp: transaction.timestamp,
-          ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex} : {from},
-          ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex} : {to},
+          ...from && typeof from === 'object' ? {from: from.hex.toString('hex'), fromHex: from.hex} : {from},
+          ...to && typeof to === 'object' ? {to: to.hex.toString('hex'), toHex: to.hex} : {to},
           value: BigInt(`0x${transaction.data.toString('hex')}`)
         }
       })
@@ -552,7 +552,7 @@ class QRC20Service extends Service {
         let address = addresses[index]
         return {
           ...address && typeof address === 'object' ? {
-            address: address.string,
+            address: address.hex.toString('hex'),
             addressHex: address.hex.toString('hex')
           } : {address},
           balance

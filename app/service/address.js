@@ -187,6 +187,7 @@ class AddressService extends Service {
   }
 
   async getAddressContractTransactions(rawAddresses, contract) {
+    console.log(rawAddresses, contract)
     const db = this.ctx.model
     const {Address} = db
     const {sql} = this.ctx.helper
@@ -294,8 +295,8 @@ class AddressService extends Service {
           blockHash: transaction.blockHash,
           timestamp: transaction.timestamp,
           confirmations: this.app.blockchainInfo.tip.height - transaction.blockHeight + 1,
-          ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex} : {from},
-          ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex} : {to},
+          ...from && typeof from === 'object' ? {from: from.hex.toString('hex'), fromHex: from.hex} : {from},
+          ...to && typeof to === 'object' ? {to: to.hex.toString('hex'), toHex: to.hex} : {to},
           value,
           amount: BigInt(Boolean(toAddress) - Boolean(fromAddress)) * value
         }
@@ -378,8 +379,8 @@ class AddressService extends Service {
       return {
         transactionId: transaction.transaction.id,
         outputIndex: transaction.outputIndex,
-        ...from && typeof addresses[0] === 'object' ? {from: addresses[0].string, fromHex: addresses[0].hex} : {from: addresses[0]},
-        ...to && typeof addresses[1] === 'object' ? {to: addresses[1].string, toHex: addresses[1].hex} : {to: addresses[1]},
+        ...from && typeof addresses[0] === 'object' ? {from: addresses[0].hex.toString('hex'), fromHex: addresses[0].hex} : {from: addresses[0]},
+        ...to && typeof addresses[1] === 'object' ? {to: addresses[1].hex.toString('hex'), toHex: addresses[1].hex} : {to: addresses[1]},
         value,
         amount: BigInt(isTo - isFrom) * value
       }

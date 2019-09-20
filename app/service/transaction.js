@@ -260,7 +260,7 @@ class TransactionService extends Service {
               let result = {}
               if (input.address) {
                 result.address = [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
-                  ? input.address.contract.addressString
+                  ? input.address.contract.address.toString('hex')
                   : input.address.string
                 result.addressHex = [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type) && input.address.contract
                   ? input.address.contract.address
@@ -273,7 +273,7 @@ class TransactionService extends Service {
               let result = {}
               if (output.address) {
                 result.address = [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
-                  ? output.address.contract.addressString
+                  ? output.address.contract.address.toString('hex')
                   : output.address.string
                 result.addressHex = [RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type) && output.address.contract
                   ? output.address.contract.address
@@ -305,11 +305,11 @@ class TransactionService extends Service {
         if (input.address) {
           if ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(input.address.type)) {
             if (input.address.contract) {
-              inputObject.address = input.address.contract.addressString
+              inputObject.address = input.address.contract.address.toString('hex')
               inputObject.addressHex = input.address.contract.address
             } else {
               let address = RawAddress.fromString(input.address.string, this.app.chain)
-              inputObject.address = input.address.string
+              inputObject.address = address.data.toString('hex')
               inputObject.addressHex = address.data
               inputObject.isInvalidContract = true
             }
@@ -327,11 +327,11 @@ class TransactionService extends Service {
         if (output.address) {
           if ([RawAddress.CONTRACT, RawAddress.EVM_CONTRACT].includes(output.address.type)) {
             if (output.address.contract) {
-              outputObject.address = output.address.contract.addressString
+              outputObject.address = output.address.contract.address.toString('hex')
               outputObject.addressHex = output.address.contract.address
             } else {
               let address = RawAddress.fromString(output.address.string, this.app.chain)
-              outputObject.address = output.address.string
+              outputObject.address = address.data.toString('hex')
               outputObject.addressHex = address.data
               outputObject.isInvalidContract = true
             }
@@ -358,19 +358,14 @@ class TransactionService extends Service {
               data: output.evmReceipt.senderData,
               chain: this.app.chain
             }).toString(),
-            gasUsed: output.evmReceipt.gasUsed
+            gasUsed: output.evmReceipt.gasUsed,
+            contractAddress: output.evmReceipt.contractAddress.toString('hex'),
+            contractAddressHex: output.evmReceipt.contractAddress,
+            excepted: output.evmReceipt.excepted,
+            exceptedMessage: output.evmReceipt.exceptedMessage
           }
-          if (output.evmReceipt.contract) {
-            outputObject.evmReceipt.contractAddress = output.evmReceipt.contract.addressString
-            outputObject.evmReceipt.contractAddressHex = output.evmReceipt.contractAddress
-          } else {
-            outputObject.evmReceipt.contractAddress = output.evmReceipt.contractAddress.toString('hex')
-            outputObject.evmReceipt.contractAddressHex = output.evmReceipt.contractAddress
-          }
-          outputObject.evmReceipt.excepted = output.evmReceipt.excepted
-          outputObject.evmReceipt.exceptedMessage = output.evmReceipt.exceptedMessage
           outputObject.evmReceipt.logs = eventLogs.filter(log => log.receiptId === output.evmReceipt._id).map(log => ({
-            address: log.contract.addressString,
+            address: log.address.toString('hex'),
             addressHex: log.address,
             topics: this.transformTopics(log),
             data: log.data,
@@ -593,12 +588,12 @@ class TransactionService extends Service {
         contractSpends: transaction.contractSpends.length
           ? transaction.contractSpends.map(({inputs, outputs}) => ({
             inputs: inputs.map(input => ({
-              address: input.address,
+              address: input.addressHex.toString('hex'),
               addressHex: input.addressHex.toString('hex'),
               value: input.value.toString()
             })),
             outputs: outputs.map(output => ({
-              address: output.address,
+              address: output.addressHex ? output.addressHex.toString('hex') : output.address,
               addressHex: output.addressHex && output.addressHex.toString('hex'),
               value: output.value.toString()
             }))
@@ -625,7 +620,7 @@ class TransactionService extends Service {
       result.prevTxId = input.prevTxId.toString('hex')
       result.outputIndex = input.outputIndex
       result.value = input.value.toString()
-      result.address = input.address
+      result.address = input.addressHex ? input.addressHex.toString('hex') : input.address
       result.addressHex = input.addressHex && input.addressHex.toString('hex')
       result.isInvalidContract = input.isInvalidContract
     }
@@ -647,7 +642,7 @@ class TransactionService extends Service {
     let type = scriptPubKey.isEmpty() ? 'empty' : scriptPubKey.type
     let result = {
       value: output.value.toString(),
-      address: output.address,
+      address: output.addressHex ? output.addressHex.toString('hex') : output.address,
       addressHex: output.addressHex && output.addressHex.toString('hex'),
       isInvalidContract: output.isInvalidContract,
       scriptPubKey: {type}
@@ -665,12 +660,12 @@ class TransactionService extends Service {
       result.receipt = {
         sender: output.evmReceipt.sender,
         gasUsed: output.evmReceipt.gasUsed,
-        contractAddress: output.evmReceipt.contractAddress,
+        contractAddress: output.evmReceipt.contractAddressHex.toString('hex'),
         contractAddressHex: output.evmReceipt.contractAddressHex.toString('hex'),
         excepted: output.evmReceipt.excepted,
         exceptedMessage: output.evmReceipt.exceptedMessage,
         logs: output.evmReceipt.logs.map(log => ({
-          address: log.address,
+          address: log.addressHex.toString('hex'),
           addressHex: log.addressHex.toString('hex'),
           topics: log.topics.map(topic => topic.toString('hex')),
           data: log.data.toString('hex')
@@ -685,17 +680,17 @@ class TransactionService extends Service {
     let result = []
     for (let output of outputs) {
       if (output.evmReceipt) {
-        for (let {address, addressHex, topics, data, qrc20} of output.evmReceipt.logs) {
+        for (let {addressHex, topics, data, qrc20} of output.evmReceipt.logs) {
           if (qrc20 && topics.length === 3 && Buffer.compare(topics[0], TransferABI.id) === 0 && data.length === 32) {
             let [from, to] = await this.ctx.service.contract.transformHexAddresses([topics[1].slice(12), topics[2].slice(12)])
             result.push({
-              address,
+              address: addressHex.toString('hex'),
               addressHex: addressHex.toString('hex'),
               name: qrc20.name,
               symbol: qrc20.symbol,
               decimals: qrc20.decimals,
-              ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex.toString('hex')} : {from},
-              ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex.toString('hex')} : {to},
+              ...from && typeof from === 'object' ? {from: from.hex.toString('hex'), fromHex: from.hex.toString('hex')} : {from},
+              ...to && typeof to === 'object' ? {to: to.hex.toString('hex'), toHex: to.hex.toString('hex')} : {to},
               value: BigInt(`0x${data.toString('hex')}`).toString()
             })
           }
@@ -737,7 +732,7 @@ class TransactionService extends Service {
         let [to] = await this.ctx.service.contract.transformHexAddresses([byteCode.slice(16, 36)])
         let value = BigInt(`0x${byteCode.slice(36).toString('hex')}`)
         result.push({
-          address: output.address,
+          address: output.addressHex.toString('hex'),
           addressHex: output.addressHex.toString('hex'),
           name: qrc20.name,
           symbol: qrc20.symbol,
@@ -758,16 +753,16 @@ class TransactionService extends Service {
     let result = []
     for (let output of outputs) {
       if (output.evmReceipt) {
-        for (let {address, addressHex, topics, qrc721} of output.evmReceipt.logs) {
+        for (let {addressHex, topics, qrc721} of output.evmReceipt.logs) {
           if (qrc721 && topics.length === 4 && Buffer.compare(topics[0], TransferABI.id) === 0) {
             let [from, to] = await this.ctx.service.contract.transformHexAddresses([topics[1].slice(12), topics[2].slice(12)])
             result.push({
-              address,
+              address: addressHex.toString('hex'),
               addressHex: addressHex.toString('hex'),
               name: qrc721.name,
               symbol: qrc721.symbol,
-              ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex.toString('hex')} : {from},
-              ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex.toString('hex')} : {to},
+              ...from && typeof from === 'object' ? {from: from.hex.toString('hex'), fromHex: from.hex.toString('hex')} : {from},
+              ...to && typeof to === 'object' ? {to: to.hex.toString('hex'), toHex: to.hex.toString('hex')} : {to},
               tokenId: topics[3].toString('hex')
             })
           }
@@ -968,11 +963,11 @@ class TransactionService extends Service {
     let outputAddressHex
     let isInvalidContract
     if (receipt.output.address.contract) {
-      outputAddress = receipt.output.address.contract.addressString
+      outputAddress = receipt.output.address.contract.address.toString('hex')
       outputAddressHex = receipt.output.address.contract.address
     } else {
       let address = RawAddress.fromString(receipt.output.address.string, this.app.chain)
-      outputAddress = receipt.output.address.string
+      outputAddress = address.data.toString('hex')
       outputAddressHex = address.data
       isInvalidContract = true
     }
@@ -996,12 +991,12 @@ class TransactionService extends Service {
         chain: this.app.chain
       }),
       gasUsed: receipt.gasUsed,
-      contractAddress: receipt.contract ? receipt.contract.addressString : receipt.contractAddress.toString('hex'),
+      contractAddress: receipt.contractAddress.toString('hex'),
       contractAddressHex: receipt.contractAddress,
       excepted: receipt.excepted,
       exceptedMessage: receipt.exceptedMessage,
       evmLogs: logs.map(log => ({
-        address: log.contract.addressString,
+        address: log.address.toString('hex'),
         addressHex: log.address,
         topics: this.transformTopics(log),
         data: log.data

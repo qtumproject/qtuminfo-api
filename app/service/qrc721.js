@@ -30,7 +30,7 @@ class QRC721Service extends Service {
     return {
       totalCount,
       tokens: list.map(item => ({
-        address: item.address,
+        address: item.addressHex.toString('hex'),
         addressHex: item.addressHex,
         name: item.name.toString(),
         symbol: item.symbol.toString(),
@@ -61,7 +61,7 @@ class QRC721Service extends Service {
       INNER JOIN qrc721 ON qrc721.contract_address = qrc721_token.contract_address
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return list.map(item => ({
-      address: item.address,
+      address: item.addressHex.toString('hex'),
       addressHex: item.addressHex,
       name: item.name.toString(),
       symbol: item.symbol.toString(),

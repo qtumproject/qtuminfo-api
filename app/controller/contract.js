@@ -7,7 +7,7 @@ class ContractController extends Controller {
       ctx.state.contract.contractAddress, ctx.state.contract.addressIds
     )
     ctx.body = {
-      address: summary.address,
+      address: summary.addressHex.toString('hex'),
       addressHex: summary.addressHex.toString('hex'),
       vm: summary.vm,
       type: summary.type,
@@ -34,7 +34,7 @@ class ContractController extends Controller {
       totalSent: summary.totalSent.toString(),
       unconfirmed: summary.unconfirmed.toString(),
       qrc20Balances: summary.qrc20Balances.map(item => ({
-        address: item.address,
+        address: item.addressHex.toString('hex'),
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
         symbol: item.symbol,
@@ -42,7 +42,7 @@ class ContractController extends Controller {
         balance: item.balance.toString()
       })),
       qrc721Balances: summary.qrc721Balances.map(item => ({
-        address: item.address,
+        address: item.addressHex.toString('hex'),
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
         symbol: item.symbol,
@@ -82,12 +82,12 @@ class ContractController extends Controller {
         outputValue: transaction.value.toString(),
         sender: transaction.sender.toString(),
         gasUsed: transaction.gasUsed,
-        contractAddress: transaction.contractAddress,
+        contractAddress: transaction.contractAddressHex.toString('hex'),
         contractAddressHex: transaction.contractAddressHex.toString('hex'),
         excepted: transaction.excepted,
         exceptedMessage: transaction.exceptedMessage,
         evmLogs: transaction.evmLogs.map(log => ({
-          address: log.address,
+          address: log.addressHex.toString('hex'),
           addressHex: log.addressHex.toString('hex'),
           topics: log.topics.map(topic => topic.toString('hex')),
           data: log.data.toString('hex')
@@ -137,7 +137,7 @@ class ContractController extends Controller {
         height: tx.block.height,
         timestamp: tx.block.timestamp,
         tokens: tx.tokens.map(item => ({
-          address: item.address,
+          address: item.addressHex.toString('hex'),
           addressHex: item.addressHex.toString('hex'),
           name: item.name,
           symbol: item.symbol,
@@ -215,9 +215,9 @@ class ContractController extends Controller {
         blockHeight: log.blockHeight,
         timestamp: log.timestamp,
         sender: log.sender.toString(),
-        contractAddress: log.contractAddress,
+        contractAddress: log.contractAddressHex.toString('hex'),
         contractAddressHex: log.contractAddressHex.toString('hex'),
-        address: log.address,
+        address: log.addressHex.toString('hex'),
         addressHex: log.addressHex.toString('hex'),
         topics: log.topics.map(topic => topic.toString('hex')),
         data: log.data.toString('hex')

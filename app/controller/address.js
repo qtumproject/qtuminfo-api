@@ -13,7 +13,7 @@ class AddressController extends Controller {
       staking: summary.staking.toString(),
       mature: summary.mature.toString(),
       qrc20Balances: summary.qrc20Balances.map(item => ({
-        address: item.address,
+        address: item.addressHex.toString('hex'),
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
         symbol: item.symbol,
@@ -25,7 +25,7 @@ class AddressController extends Controller {
         }
       })),
       qrc721Balances: summary.qrc721Balances.map(item => ({
-        address: item.address,
+        address: item.addressHex.toString('hex'),
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
         symbol: item.symbol,
@@ -141,16 +141,16 @@ class AddressController extends Controller {
         gasPrice: transaction.scriptPubKey.gasPrice,
         byteCode: transaction.scriptPubKey.byteCode.toString('hex'),
         outputValue: transaction.value.toString(),
-        outputAddress: transaction.outputAddress,
+        outputAddress: transaction.outputAddressHex.toString('hex'),
         outputAddressHex: transaction.outputAddressHex.toString('hex'),
         sender: transaction.sender.toString(),
         gasUsed: transaction.gasUsed,
-        contractAddress: transaction.contractAddress,
+        contractAddress: transaction.contractAddressHex.toString('hex'),
         contractAddressHex: transaction.contractAddressHex.toString('hex'),
         excepted: transaction.excepted,
         exceptedMessage: transaction.exceptedMessage,
         evmLogs: transaction.evmLogs.map(log => ({
-          address: log.address,
+          address: log.addressHex.toString('hex'),
           addressHex: log.addressHex.toString('hex'),
           topics: log.topics.map(topic => topic.toString('hex')),
           data: log.data.toString('hex')
@@ -258,7 +258,7 @@ class AddressController extends Controller {
         blockHeight: tx.block.height,
         timestamp: tx.block.timestamp,
         tokens: tx.tokens.map(item => ({
-          address: item.address,
+          address: item.addressHex.toString('hex'),
           addressHex: item.addressHex.toString('hex'),
           name: item.name,
           symbol: item.symbol,

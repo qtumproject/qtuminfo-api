@@ -74,7 +74,7 @@ class ContractService extends Service {
       this.getContractTransactionCount(contractAddress, addressIds)
     ])
     return {
-      address: contract.addressString,
+      address: contractAddress.toString('hex'),
       addressHex: contractAddress,
       vm: contract.vm,
       type: contract.type,
@@ -272,12 +272,12 @@ class ContractService extends Service {
       value: receipt.output.value,
       sender: new Address({type: receipt.senderType, data: receipt.senderData, chain: this.app.chain}),
       gasUsed: receipt.gasUsed,
-      contractAddress: receipt.contract.addressString,
+      contractAddress: receipt.contractAddress.toString('hex'),
       contractAddressHex: receipt.contractAddress,
       excepted: receipt.excepted,
       exceptedMessage: receipt.exceptedMessage,
       evmLogs: receipt.logs.sort((x, y) => x.logIndex - y.logIndex).map(log => ({
-        address: log.contract.addressString,
+        address: log.address.toString('hex'),
         addressHex: log.address,
         topics: this.ctx.service.transaction.transformTopics(log),
         data: log.data
@@ -377,9 +377,9 @@ class ContractService extends Service {
         blockHash: log.receipt.transaction.header.hash,
         timestamp: log.receipt.transaction.header.timestamp,
         sender: new Address({type: log.receipt.senderType, data: log.receipt.senderData, chain: this.app.chain}),
-        contractAddress: log.receipt.contract.addressString,
+        contractAddress: log.receipt.contract.address.toString('hex'),
         contractAddressHex: log.receipt.contract.address,
-        address: log.contract.addressString,
+        address: log.contract.address.toString('hex'),
         addressHex: log.contract.address,
         topics: this.ctx.service.transaction.transformTopics(log),
         data: log.data

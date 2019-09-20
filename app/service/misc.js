@@ -71,7 +71,7 @@ class MiscService extends Service {
       })).map(qrc20 => qrc20.contractAddress)
     }
     if (qrc20Results.length) {
-      let [{address, addressHex}] = await db.query(sql`
+      let [{addressHex}] = await db.query(sql`
         SELECT contract.address_string AS address, contract.address AS addressHex FROM (
           SELECT contract_address FROM qrc20_statistics
           WHERE contract_address IN ${qrc20Results}
@@ -79,7 +79,7 @@ class MiscService extends Service {
         ) qrc20_balance
         INNER JOIN contract ON contract.address = qrc20_balance.contract_address
       `, {type: db.QueryTypes.SELECT, transaction})
-      return {type: 'contract', address, addressHex: addressHex.toString('hex')}
+      return {type: 'contract', address: addressHex.toString('hex'), addressHex: addressHex.toString('hex')}
     }
 
     return {}
