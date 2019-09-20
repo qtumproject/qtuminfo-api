@@ -445,7 +445,7 @@ class QRC20Service extends Service {
           item.amount += delta
         } else {
           result.tokens.push({
-            address: log.address.toString('hex'),
+            address,
             addressHex: log.address,
             name: log.qrc20.name.toString(),
             symbol: log.qrc20.symbol.toString(),
@@ -459,6 +459,7 @@ class QRC20Service extends Service {
         token.balance = initial
         initial -= token.amount
         initialBalanceMap.set(token.address, initial)
+        token.address = token.addressHex.toString('hex')
       }
       return result
     })
