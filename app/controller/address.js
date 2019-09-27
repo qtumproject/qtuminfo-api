@@ -205,7 +205,7 @@ class AddressController extends Controller {
       transactionId: utxo.transactionId.toString('hex'),
       outputIndex: utxo.outputIndex,
       scriptPubKey: utxo.scriptPubKey.toString('hex'),
-      address: utxo.address.string,
+      address: utxo.address,
       value: utxo.value.toString(),
       isStake: utxo.isStake,
       blockHeight: utxo.blockHeight,
