@@ -481,7 +481,9 @@ class TransactionService extends Service {
     const {Transaction} = db
     const {sql} = this.ctx.helper
     let {limit, offset} = this.ctx.state.pagination
-    let totalCount = await Transaction.count({transaction: this.ctx.state.transaction}) - 5001
+    let totalCount = await Transaction.count({transaction: this.ctx.state.transaction}) - (
+      this.app.chain.lastPoWBlockHeight === Infinity ? 1 : this.app.chain.lastPoWBlockHeight + 1
+    )
     let list = await db.query(sql`
       SELECT transaction.id AS id FROM transaction, (
         SELECT _id FROM transaction

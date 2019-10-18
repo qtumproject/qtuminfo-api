@@ -159,13 +159,13 @@ class BlockService extends Service {
   async getBlockRewards(startHeight, endHeight = startHeight + 1) {
     const db = this.ctx.model
     const {sql} = this.ctx.helper
-    const lastPoWBlockHeight = Math.min(this.app.chain.lastPoWBlockHeight, 0xffffffff)
     let rewards = await db.query(sql`
       SELECT SUM(value) AS value FROM (
-        SELECT tx.block_height AS height, output.value AS value FROM transaction tx, transaction_output output
+        SELECT tx.block_height AS height, output.value AS value FROM header, transaction tx, transaction_output output
         WHERE
           tx.block_height BETWEEN ${startHeight} AND ${endHeight - 1}
-          AND ((tx.block_height <= ${lastPoWBlockHeight} AND tx.index_in_block = 0) OR (tx.block_height > ${lastPoWBlockHeight} AND tx.index_in_block = 1))
+          AND header.height = tx.block_height
+          AND tx.index_in_block = (SELECT CASE header.stake_prev_transaction_id WHEN ${Buffer.alloc(32)} THEN 0 ELSE 1 END)
           AND output.transaction_id = tx._id
           AND NOT EXISTS (
             SELECT refund_id FROM gas_refund
@@ -173,10 +173,11 @@ class BlockService extends Service {
           )
         UNION ALL
         SELECT tx.block_height AS height, -input.value AS value
-        FROM transaction tx, transaction_input input
+        FROM header, transaction tx, transaction_input input
         WHERE
           tx.block_height BETWEEN ${startHeight} AND ${endHeight - 1}
-          AND ((tx.block_height <= ${lastPoWBlockHeight} AND tx.index_in_block = 0) OR (tx.block_height > ${lastPoWBlockHeight} AND tx.index_in_block = 1))
+          AND header.height = tx.block_height
+          AND tx.index_in_block = (SELECT CASE header.stake_prev_transaction_id WHEN ${Buffer.alloc(32)} THEN 0 ELSE 1 END)
           AND input.transaction_id = tx._id
       ) block_reward
       GROUP BY height
