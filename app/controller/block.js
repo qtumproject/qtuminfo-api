@@ -70,7 +70,29 @@ class BlockController extends Controller {
     }
     let min = Math.floor(Date.parse(date) / 1000)
     let max = min + 24 * 60 * 60
-    let blocks = await ctx.service.block.listBlocks(min, max)
+    let blocks = await ctx.service.block.listBlocks({min, max})
+    ctx.body = blocks.map(block => ({
+      hash: block.hash.toString('hex'),
+      height: block.height,
+      timestamp: block.timestamp,
+      ...block.height > 0 ? {interval: block.interval} : {},
+      size: block.size,
+      transactionCount: block.transactionsCount,
+      miner: block.miner,
+      reward: block.reward.toString()
+    }))
+  }
+
+  async blockList() {
+    const {ctx} = this
+    let dateFilter = null
+    let date = ctx.query.date
+    if (date) {
+      let min = Math.floor(Date.parse(date) / 1000)
+      let max = min + 24 * 60 * 60
+      dateFilter = {min, max}
+    }
+    let blocks = await ctx.service.block.listBlocks(dateFilter)
     ctx.body = blocks.map(block => ({
       hash: block.hash.toString('hex'),
       height: block.height,

@@ -116,17 +116,25 @@ class BlockService extends Service {
     })
   }
 
-  async listBlocks(min, max) {
+  async listBlocks(dateFilter) {
     const db = this.ctx.model
     const {sql} = this.ctx.helper
+    let {limit, offset} = this.ctx.state.pagination
+    let dateFilterString = ''
+    if (dateFilter) {
+      dateFilterString = sql`WHERE timestamp BETWEEN ${dateFilter.min} AND ${dateFilter.max - 1}`
+    }
     let blocks = await db.query(sql`
       SELECT
-        l.hash AS hash, l.height AS height, l.timestamp AS timestamp,
+        header.hash AS hash, l.height AS height, header.timestamp AS timestamp,
         block.size AS size, address.string AS miner
       FROM (
-        SELECT hash, height, timestamp FROM header
-        WHERE timestamp BETWEEN ${min} AND ${max - 1}
-      ) l, block, address WHERE l.height = block.height AND address._id = block.miner_id
+        SELECT height FROM header
+        ${{raw: dateFilterString}}
+        ORDER BY height DESC
+        LIMIT ${offset}, ${limit}
+      ) l, header, block, address
+      WHERE l.height = header.height AND l.height = block.height AND address._id = block.miner_id
       ORDER BY l.height ASC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     if (blocks.length === 0) {
