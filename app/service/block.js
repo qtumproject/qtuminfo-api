@@ -122,15 +122,18 @@ class BlockService extends Service {
     let {limit, offset} = this.ctx.state.pagination
     let dateFilterString = ''
     if (dateFilter) {
-      dateFilterString = sql`WHERE timestamp BETWEEN ${dateFilter.min} AND ${dateFilter.max - 1}`
+      dateFilterString = sql`AND timestamp BETWEEN ${dateFilter.min} AND ${dateFilter.max - 1}`
     }
+    let [{totalCount}] = await db.query(sql`
+      SELECT COUNT(*) AS totalCount FROM header WHERE height <= ${this.app.blockchainInfo.tip.height} ${{raw: dateFilterString}}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     let blocks = await db.query(sql`
       SELECT
         header.hash AS hash, l.height AS height, header.timestamp AS timestamp,
         block.size AS size, address.string AS miner
       FROM (
         SELECT height FROM header
-        ${{raw: dateFilterString}}
+        WHERE height <= ${this.app.blockchainInfo.tip.height} ${{raw: dateFilterString}}
         ORDER BY height DESC
         LIMIT ${offset}, ${limit}
       ) l, header, block, address
@@ -138,9 +141,10 @@ class BlockService extends Service {
       ORDER BY l.height ASC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     if (blocks.length === 0) {
-      return []
+      return {totalCount, blocks: []}
+    } else {
+      return {totalCount, blocks: await this.getBlockSummary(blocks)}
     }
-    return await this.getBlockSummary(blocks)
   }
 
   async getRecentBlocks(count) {
