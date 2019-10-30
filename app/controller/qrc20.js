@@ -20,6 +20,31 @@ class QRC20Controller extends Controller {
     }
   }
 
+  async allTransactions() {
+    const {ctx} = this
+    let {totalCount, transactions} = await ctx.service.qrc20.getAllQRC20TokenTransactions()
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(transaction => ({
+        transactionId: transaction.transactionId.toString('hex'),
+        outputIndex: transaction.outputIndex,
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash.toString('hex'),
+        timestamp: transaction.timestamp,
+        token: {
+          name: transaction.token.name,
+          symbol: transaction.token.symbol,
+          decimals: transaction.token.decimals
+        },
+        from: transaction.from,
+        fromHex: transaction.fromHex && transaction.fromHex.toString('hex'),
+        to: transaction.to,
+        toHex: transaction.toHex && transaction.toHex.toString('hex'),
+        value: transaction.value.toString()
+      }))
+    }
+  }
+
   async transactions() {
     const {ctx} = this
     ctx.assert(ctx.state.token.type === 'qrc20', 404)

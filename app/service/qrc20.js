@@ -469,6 +469,71 @@ class QRC20Service extends Service {
     return {totalCount, transactions}
   }
 
+  async getAllQRC20TokenTransactions() {
+    const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+    const db = this.ctx.model
+    const {sql} = this.ctx.helper
+    let {limit, offset, reversed = true} = this.ctx.state.pagination
+    let order = reversed ? 'DESC' : 'ASC'
+
+    let [{totalCount}] = await db.query(sql`
+      SELECT COUNT(*) AS totalCount
+      FROM qrc20, evm_receipt_log log
+      WHERE qrc20.contract_address = log.address AND log.topic1 = ${TransferABI.id}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    let transactions = await db.query(sql`
+      SELECT
+        transaction.id AS transactionId,
+        evm_receipt.output_index AS outputIndex,
+        evm_receipt.block_height AS blockHeight,
+        header.hash AS blockHash,
+        header.timestamp AS timestamp,
+        qrc20.name AS name,
+        qrc20.symbol AS symbol,
+        qrc20.decimals AS decimals,
+        evm_receipt_log.topic2 AS topic2,
+        evm_receipt_log.topic3 AS topic3,
+        evm_receipt_log.data AS data
+      FROM (
+        SELECT log._id AS _id FROM qrc20, evm_receipt_log log
+        WHERE qrc20.contract_address = log.address AND log.topic1 = ${TransferABI.id}
+        ORDER BY log._id ${{raw: order}} LIMIT ${offset}, ${limit}
+      ) list
+      INNER JOIN evm_receipt_log ON evm_receipt_log._id = list._id
+      INNER JOIN evm_receipt ON evm_receipt._id = evm_receipt_log.receipt_id
+      INNER JOIN qrc20 ON qrc20.contract_address = evm_receipt_log.address
+      INNER JOIN transaction ON transaction._id = evm_receipt.transaction_id
+      INNER JOIN header ON header.height = evm_receipt.block_height
+      ORDER BY list._id ${{raw: order}}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+
+    let addresses = await this.ctx.service.contract.transformHexAddresses(
+      transactions.map(transaction => [transaction.topic2.slice(12), transaction.topic3.slice(12)]).flat()
+    )
+    return {
+      totalCount,
+      transactions: transactions.map((transaction, index) => {
+        let from = addresses[index * 2]
+        let to = addresses[index * 2 + 1]
+        return {
+          transactionId: transaction.transactionId,
+          outputIndex: transaction.outputIndex,
+          blockHeight: transaction.blockHeight,
+          blockHash: transaction.blockHash,
+          timestamp: transaction.timestamp,
+          token: {
+            name: transaction.name.toString(),
+            symbol: transaction.symbol.toString(),
+            decimals: transaction.decimals
+          },
+          ...from && typeof from === 'object' ? {from: from.hex.toString('hex'), fromHex: from.hex} : {from},
+          ...to && typeof to === 'object' ? {to: to.hex.toString('hex'), toHex: to.hex} : {to},
+          value: BigInt(`0x${transaction.data.toString('hex')}`)
+        }
+      })
+    }
+  }
+
   async getQRC20TokenTransactions(contractAddress) {
     const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
