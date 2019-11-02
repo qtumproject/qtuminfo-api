@@ -119,7 +119,6 @@ class BlockService extends Service {
   async listBlocks(dateFilter) {
     const db = this.ctx.model
     const {sql} = this.ctx.helper
-    let {limit, offset} = this.ctx.state.pagination
     let dateFilterString = ''
     if (dateFilter) {
       dateFilterString = sql`AND timestamp BETWEEN ${dateFilter.min} AND ${dateFilter.max - 1}`
@@ -127,19 +126,36 @@ class BlockService extends Service {
     let [{totalCount}] = await db.query(sql`
       SELECT COUNT(*) AS totalCount FROM header WHERE height <= ${this.app.blockchainInfo.tip.height} ${{raw: dateFilterString}}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-    let blocks = await db.query(sql`
-      SELECT
-        header.hash AS hash, l.height AS height, header.timestamp AS timestamp,
-        block.size AS size, address.string AS miner
-      FROM (
-        SELECT height FROM header
-        WHERE height <= ${this.app.blockchainInfo.tip.height} ${{raw: dateFilterString}}
-        ORDER BY height DESC
-        LIMIT ${offset}, ${limit}
-      ) l, header, block, address
-      WHERE l.height = header.height AND l.height = block.height AND address._id = block.miner_id
-      ORDER BY l.height ASC
-    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    let blocks
+    if (this.ctx.state.pagination) {
+      let {limit, offset} = this.ctx.state.pagination
+      blocks = await db.query(sql`
+        SELECT
+          header.hash AS hash, l.height AS height, header.timestamp AS timestamp,
+          block.size AS size, address.string AS miner
+        FROM (
+          SELECT height FROM header
+          WHERE height <= ${this.app.blockchainInfo.tip.height} ${{raw: dateFilterString}}
+          ORDER BY height DESC
+          LIMIT ${offset}, ${limit}
+        ) l, header, block, address
+        WHERE l.height = header.height AND l.height = block.height AND address._id = block.miner_id
+        ORDER BY l.height ASC
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    } else { 
+      blocks = await db.query(sql`
+        SELECT
+          header.hash AS hash, l.height AS height, header.timestamp AS timestamp,
+          block.size AS size, address.string AS miner
+        FROM (
+          SELECT height FROM header
+          WHERE height <= ${this.app.blockchainInfo.tip.height} ${{raw: dateFilterString}}
+          ORDER BY height DESC
+        ) l, header, block, address
+        WHERE l.height = header.height AND l.height = block.height AND address._id = block.miner_id
+        ORDER BY l.height ASC
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    }
     if (blocks.length === 0) {
       return {totalCount, blocks: []}
     } else {

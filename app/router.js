@@ -11,11 +11,7 @@ module.exports = app => {
   router.get('/circulating-supply', controller.info.circulatingSupply)
   router.get('/feerates', controller.info.feeRates)
 
-  router.get(
-    '/blocks',
-    paginationMiddleware,
-    controller.block.list
-  )
+  router.get('/blocks', controller.block.list)
   router.get(
     '/block/list',
     paginationMiddleware,
