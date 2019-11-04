@@ -22,7 +22,8 @@ class AddressController extends Controller {
         unconfirmed: {
           received: item.unconfirmed.received.toString(),
           sent: item.unconfirmed.sent.toString()
-        }
+        },
+        isUnconfirmed: item.isUnconfirmed
       })),
       qrc721Balances: summary.qrc721Balances.map(item => ({
         address: item.addressHex.toString('hex'),

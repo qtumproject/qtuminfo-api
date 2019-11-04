@@ -149,7 +149,9 @@ class QRC20Service extends Service {
             unconfirmed: {
               received: 0n,
               sent: 0n
-            }
+            },
+            isUnconfirmed: true,
+            isNew: true
           }
           mapping.set(item.output.address.contract.addressString, data)
         }
@@ -158,6 +160,9 @@ class QRC20Service extends Service {
         let value = BigInt(`0x${byteCode.slice(36).toString('hex')}`)
         let isFrom = hexAddresses.some(address => Buffer.compare(address, from) === 0)
         let isTo = hexAddresses.some(address => Buffer.compare(address, to) === 0)
+        if (isFrom || isTo) {
+          delete data.isNew
+        }
         if (isFrom && !isTo) {
           data.unconfirmed.sent += value
         } else if (!isFrom && isTo) {
@@ -165,7 +170,7 @@ class QRC20Service extends Service {
         }
       }
     }
-    return [...mapping.values()]
+    return [...mapping.values()].filter(item => !item.isNew)
   }
 
   async getQRC20Balance(rawAddresses, tokenAddress) {
