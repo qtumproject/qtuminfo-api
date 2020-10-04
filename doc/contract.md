@@ -287,7 +287,7 @@ GET /contract/:contract/call
     <tbody>
         <tr>
             <td>
-              <code>date</code>
+              <code>data</code>
             </td>
             <td>
               String
